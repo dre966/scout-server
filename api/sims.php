@@ -147,6 +147,8 @@ try {
             'status' => $sim['status'] ?? '?',
             'countryCode' => $sim['countryCode'] ?? $sim['country'] ?? '?',
             'package' => $pkg,
+            'testsInCycle' => $sim['testsInCycle'] ?? $item['testsInCycle'] ?? $sim['testsThisCycle'] ?? 0,
+            'cooldownEndsAt' => $sim['cooldownEndsAt'] ?? $item['cooldownEndsAt'] ?? null,
             'raw' => $item
         ];
     }

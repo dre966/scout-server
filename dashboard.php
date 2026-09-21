@@ -548,10 +548,8 @@ async function refreshCallStatus(){
           sims = js.sims.map(s=>({phone:s.phoneNumber||s.phone||'?', cycle:0, status:s.status||'?', isMax:false, isCurrent:false, cooldownEndsAt:null, id:s.id}));
           // try to parse cycle if present in raw
           sims = js.sims.map(s=>{
-            const raw=s.raw||s;
-            const simObj=raw.sim||raw;
-            const cyc=parseInt(simObj.testsInCycle??s.testsInCycle??0);
-            return {phone:simObj.phoneNumber||s.phoneNumber||'?', cycle:cyc, status:simObj.status||s.status||'?', isMax:cyc>=8, isCurrent:false, cooldownEndsAt:simObj.cooldownEndsAt||null, id:simObj.id||s.id};
+            const cyc=parseInt(s.testsInCycle??s.testsThisCycle??0);
+            return {phone:s.phoneNumber||'?', cycle:cyc, status:s.status||'?', isMax:cyc>=8, isCurrent:false, cooldownEndsAt:s.cooldownEndsAt||null, id:s.id};
           });
           updated='live';
         }
