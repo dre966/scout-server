@@ -257,15 +257,25 @@ function render(){
     </tr>
   `).join('');
 }
+let bannerTimer=null;
 function renderGlobalNotifs(list){
   const el=document.getElementById('globalNotifs');
   const bHigh=document.getElementById('bannerHigh');
   const bWarn=document.getElementById('bannerWarn');
-  const high = list.filter(n=> ['nosimsregistered','nonumberstotest','accountdeleted'].includes(String(n.type||'').toLowerCase()));
-  const warn = list.filter(n=> !high.includes(n));
+  // only show HIGH from last 2 mins on other pages (sensitive)
+  const now=Date.now();
+  const highAll = list.filter(n=> ['nosimsregistered','nonumberstotest','accountdeleted'].includes(String(n.type||'').toLowerCase()));
+  const high = highAll.filter(n=>{
+    let t=n.created_at.replace(' ','T'); if(!/[Z+\-]/.test(t.slice(10))) t+='Z'; else if(/\+\d{2}$/.test(t)) t+=':00';
+    const d=new Date(t).getTime(); return !isNaN(d) && (now - d) < 120000;
+  });
+  const warn = list.filter(n=> !highAll.includes(n));
   if(bHigh){
-    if(high.length){ bHigh.style.display='block'; bHigh.innerHTML='🚨 '+high.map(h=>`${esc(h.type)} — Bot ${esc(h.bot_id)}: ${esc(h.message)} <span style="opacity:.7">(${fmtLogAge(h.created_at)})</span>`).join(' • '); }
-    else { bHigh.style.display='none'; bHigh.innerHTML=''; }
+    if(high.length){ bHigh.style.display='block'; bHigh.innerHTML='🚨 '+high.map(h=>`${esc(h.type)} — Bot ${esc(h.bot_id)}: ${esc(h.message)} <span style="opacity:.7">(${fmtLogAge(h.created_at)})</span>`).join(' • ');
+      if(bannerTimer) clearTimeout(bannerTimer);
+      bannerTimer=setTimeout(()=>{ bHigh.style.display='none'; bHigh.innerHTML=''; }, 120000);
+    }
+    else { bHigh.style.display='none'; bHigh.innerHTML=''; if(bannerTimer){clearTimeout(bannerTimer); bannerTimer=null;} }
   }
   if(bWarn){
     if(warn.length && high.length===0){ bWarn.style.display='block'; bWarn.textContent=warn[0].type+': '+warn[0].message; }
