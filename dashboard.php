@@ -100,6 +100,42 @@ tr.selected{background:#1e3a5f}
 </div>
 
 <div class="card" style="margin:12px">
+  <h2>Device Tokens &amp; SIM Packages — Server-Coordinated Flow
+    <button class="btn btn-primary" id="btnLoadTokens" onclick="loadDevicesAndTokens()">Load devices &amp; tokens</button>
+  </h2>
+  <div class="muted">Active bots from heartbeat appear here. Click <b>Load devices &amp; tokens</b> to ask each bot for its bearer token (from localStorage). Tokens are stored server-side and used to proxy scout API.</div>
+  <div style="overflow:auto;max-height:38vh">
+    <table>
+      <thead><tr><th><input type="checkbox" id="chkAll" onchange="toggleAll(this.checked)"></th><th>Bot</th><th>Proxy Email</th><th>Poll Inbox</th><th>State</th><th>Token</th><th>Updated</th><th>Heartbeat</th></tr></thead>
+      <tbody id="tokenTbody"></tbody>
+    </table>
+  </div>
+  <div id="tokenStatus" class="muted">No tokens loaded yet.</div>
+  <div class="controls" id="postTokenControls" style="display:none">
+    <button class="btn btn-secondary" onclick="deleteAccountPlaceholder()">Delete Account</button>
+    <button class="btn btn-primary" onclick="openSimRegisterFlow()">Register SIMs under package</button>
+    <span class="muted">Select a device (checkbox) first. Physical SIM must already be registered to the account.</span>
+  </div>
+
+  <!-- SIM / package mapping area -->
+  <div id="simMappingArea" style="display:none; border-top:1px solid #334155; padding:10px">
+    <div class="flex" style="margin-bottom:8px">
+      <label style="font-size:13px">Device:
+        <select id="simBotSelect" style="min-width:140px"></select>
+      </label>
+      <button class="btn btn-secondary" onclick="fetchSimsAndPackages()">Fetch SIMs &amp; Packages</button>
+      <span id="simFetchStatus" class="muted"></span>
+    </div>
+    <div id="simMappingTableWrap" style="overflow:auto;max-height:42vh"></div>
+    <div class="controls">
+      <button class="btn btn-primary" id="btnRegisterSims" onclick="registerSims()" disabled>Register</button>
+      <span class="muted">Choose a package per SIM (empty = not register). Server will POST to <code>/runner/sim/{id}/package</code> using selected device's token, then tell bot to refresh.</span>
+    </div>
+    <div id="registerResult" class="logs" style="max-height:22vh; display:none"></div>
+  </div>
+</div>
+
+<div class="card" style="margin:12px">
   <h2>Recent Notifications</h2>
   <div id="globalNotifs" class="logs" style="max-height:30vh"></div>
 </div>
@@ -234,7 +270,7 @@ async function sendCommand(bot_id, cmd, args){
   }catch(e){ alert('Send failed: '+e.message); }
 }
 
-function pollNow(){ fetchBots(); }
+function pollNow(){ fetchBots(); fetchTokensTable(); }
 function resetTimer(){
   const v=parseInt(document.getElementById('autoPoll').value);
   if(timer) clearInterval(timer);
@@ -243,6 +279,197 @@ function resetTimer(){
 setInterval(()=>{ document.getElementById('clock').textContent=new Date().toLocaleString(); },1000);
 fetchBots();
 timer=setInterval(fetchBots, 2000);
+
+// -------- Token / SIM flow --------
+let tokenPollTimer = null;
+let simsCache = [];
+let packagesCache = [];
+
+function maskToken(t){
+  if(!t) return '<span class="badge badge-gray">—</span>';
+  t = String(t);
+  if(t.length < 10) return esc(t);
+  return esc(t.slice(0,6)) + '...' + esc(t.slice(-4)) + ' <span style="color:#22c55e">●</span>';
+}
+function fmtTime(s){
+  if(!s) return '—';
+  try{
+    const d = new Date(s.replace(' ','T'));
+    return d.toLocaleString();
+  }catch{ return s; }
+}
+function fetchTokensTable(){
+  // refresh token table without re-queueing commands
+  if(bots.length) renderTokensTable();
+}
+function renderTokensTable(){
+  const tbody = document.getElementById('tokenTbody');
+  const sel = document.getElementById('simBotSelect');
+  if(!tbody) return;
+  // keep checked ids
+  const checked = new Set([...tbody.querySelectorAll('input[type=checkbox][data-bot]:checked')].map(e=>e.getAttribute('data-bot')));
+  tbody.innerHTML = bots.map(b=>{
+    const masked = b.auth_token ? maskToken(b.auth_token) : '<span class="badge badge-gray">no token</span>';
+    const isChecked = checked.has(String(b.id)) ? 'checked' : '';
+    return `<tr>
+      <td><input type="checkbox" data-bot="${b.id}" ${isChecked} onchange="onTokenCheck()"></td>
+      <td><b>${esc(b.id)}</b></td>
+      <td title="${esc(b.proxy_email)}">${esc((b.proxy_email||'').slice(0,28))}</td>
+      <td title="${esc(b.poll_inbox)}">${esc((b.poll_inbox||'').slice(0,24))}</td>
+      <td><span class="badge badge-gray">${esc(b.state||'—')}</span></td>
+      <td title="${esc(b.auth_token||'')}">${masked}</td>
+      <td>${fmtTime(b.token_updated_at)}</td>
+      <td>${fmtAge(b.heartbeat_at)}</td>
+    </tr>`;
+  }).join('');
+  if(sel){
+    const prev = sel.value;
+    sel.innerHTML = bots.map(b=>`<option value="${b.id}">Bot ${b.id} — ${esc((b.proxy_email||'').slice(0,18))} ${b.auth_token?'●':''}</option>`).join('');
+    if(prev) sel.value = prev;
+  }
+  document.getElementById('tokenStatus').textContent = bots.length ? `${bots.length} device(s) shown — tokens ${bots.filter(b=>b.auth_token).length}/${bots.length} loaded` : 'No bots';
+  document.getElementById('postTokenControls').style.display = bots.length ? 'flex' : 'none';
+}
+function toggleAll(checked){
+  document.querySelectorAll('#tokenTbody input[type=checkbox][data-bot]').forEach(e=> e.checked = checked);
+  onTokenCheck();
+}
+function onTokenCheck(){
+  const any = document.querySelector('#tokenTbody input[type=checkbox][data-bot]:checked');
+  document.getElementById('postTokenControls').style.display = any ? 'flex' : 'none';
+}
+function getSelectedBotId(){
+  const cb = document.querySelector('#tokenTbody input[type=checkbox][data-bot]:checked');
+  if(cb) return cb.getAttribute('data-bot');
+  const sel = document.getElementById('simBotSelect');
+  if(sel && sel.value) return sel.value;
+  if(selected) return selected;
+  return bots[0]?.id || null;
+}
+async function loadDevicesAndTokens(){
+  const btn = document.getElementById('btnLoadTokens');
+  btn.disabled = true; btn.textContent = 'Loading…';
+  try{
+    // fresh bots list first
+    const r = await fetch('api/state.php', {headers: HEADERS});
+    const j = await r.json();
+    if(j.ok){ bots = j.bots||[]; render(); renderTokensTable(); }
+    if(!bots.length){ alert('No active bots found (heartbeat). Ensure bots are running and posting to api/heartbeat.php'); btn.disabled=false; btn.textContent='Load devices & tokens'; return; }
+    document.getElementById('tokenStatus').textContent = `Dispatching get_auth_token to ${bots.length} bot(s)…`;
+    // dispatch command to each bot
+    for(const b of bots){
+      try{
+        await fetch('api/command.php', {method:'POST', headers: HEADERS, body: JSON.stringify({bot_id: parseInt(b.id), cmd: 'get_auth_token'})});
+      }catch(e){}
+    }
+    document.getElementById('tokenStatus').textContent = `Commands queued — polling for tokens (bots reply in ~3s)…`;
+    // poll state every 1.5s for ~12s to update masked tokens
+    let polls = 0;
+    if(tokenPollTimer) clearInterval(tokenPollTimer);
+    tokenPollTimer = setInterval(async ()=>{
+      polls++;
+      try{
+        const pr = await fetch('api/state.php', {headers: HEADERS});
+        const pj = await pr.json();
+        if(pj.ok){ bots = pj.bots||bots; render(); renderTokensTable(); }
+      }catch{}
+      if(polls >= 10){ clearInterval(tokenPollTimer); document.getElementById('tokenStatus').textContent = `Done — ${bots.filter(b=>b.auth_token).length}/${bots.length} token(s) loaded. Select a device then Register SIMs under package.`; btn.disabled=false; btn.textContent='Load devices & tokens'; }
+    }, 1500);
+  }catch(e){
+    document.getElementById('tokenStatus').textContent = 'Load failed: '+e.message;
+    btn.disabled=false; btn.textContent='Load devices & tokens';
+  }
+}
+function deleteAccountPlaceholder(){
+  const bid = getSelectedBotId();
+  if(!bid) return alert('Select a device first');
+  alert('Delete Account flow not yet implemented (placeholder). Selected bot '+bid+' would dispatch delete_account command.');
+}
+function openSimRegisterFlow(){
+  const bid = getSelectedBotId();
+  if(!bid) return alert('Select a device (checkbox) first');
+  document.getElementById('simMappingArea').style.display = 'block';
+  document.getElementById('simBotSelect').value = bid;
+  document.getElementById('simFetchStatus').textContent = 'Ready — click Fetch SIMs & Packages';
+  document.getElementById('simMappingArea').scrollIntoView({behavior:'smooth'});
+}
+async function fetchSimsAndPackages(){
+  const bid = document.getElementById('simBotSelect').value;
+  if(!bid) return alert('Select device');
+  const status = document.getElementById('simFetchStatus');
+  const wrap = document.getElementById('simMappingTableWrap');
+  const btnReg = document.getElementById('btnRegisterSims');
+  status.textContent = 'Fetching SIMs…';
+  wrap.innerHTML = '<div class="muted">Loading…</div>';
+  btnReg.disabled = true;
+  simsCache = []; packagesCache = [];
+  try{
+    const [simsRes, pkgsRes] = await Promise.all([
+      fetch('api/sims.php?bot_id='+encodeURIComponent(bid), {headers: HEADERS}),
+      fetch('api/packages.php?bot_id='+encodeURIComponent(bid), {headers: HEADERS})
+    ]);
+    const simsJ = await simsRes.json();
+    const pkgsJ = await pkgsRes.json();
+    if(!simsJ.ok) throw new Error('SIMs: '+(simsJ.error||simsJ.body||'unknown'));
+    if(!pkgsJ.ok) throw new Error('Packages: '+(pkgsJ.error||pkgsJ.body||'unknown'));
+    simsCache = simsJ.sims||[];
+    packagesCache = pkgsJ.packages||[];
+    status.textContent = `${simsCache.length} SIM(s), ${packagesCache.length} package(s) — select per SIM then Register`;
+    if(!simsCache.length){
+      wrap.innerHTML = '<div class="muted">No SIMs found for this account. Register physical SIM first.</div>';
+      return;
+    }
+    // dedup already done server-side, but keep as-is
+    const pkgOptions = ['<option value="">— not register —</option>'].concat(packagesCache.map(p=>`<option value="${esc(p.categoryId)}">${esc(p.name)} — $${esc(p.price)} (${esc(p.carrier)})</option>`)).join('');
+    wrap.innerHTML = `<table>
+      <thead><tr><th>SIM</th><th>Carrier</th><th>Status</th><th>Current pkg</th><th>Select package</th></tr></thead>
+      <tbody>${simsCache.map((s,i)=>`
+        <tr>
+          <td><b>${esc(s.phoneNumber)}</b><br><span style="color:#64748b;font-size:11px">${esc(s.id)}</span></td>
+          <td>${esc(s.carrier)}</td>
+          <td>${esc(s.status)}</td>
+          <td>${esc(s.package?.name || s.package?.variantLabel || 'none')}</td>
+          <td><select data-sim="${esc(s.id)}" style="min-width:220px">${pkgOptions}</select></td>
+        </tr>
+      `).join('')}</tbody>
+    </table>`;
+    btnReg.disabled = false;
+  }catch(e){
+    status.textContent = 'Fetch failed: '+e.message;
+    wrap.innerHTML = `<div class="muted" style="color:#f87171">Error: ${esc(e.message)}</div>`;
+  }
+}
+async function registerSims(){
+  const bid = document.getElementById('simBotSelect').value;
+  if(!bid) return alert('Select device');
+  const selects = document.querySelectorAll('#simMappingTableWrap select[data-sim]');
+  const mappings = [...selects].map(s=>({simId: s.getAttribute('data-sim'), packageId: s.value || null}));
+  const toRegister = mappings.filter(m=>m.packageId);
+  if(!toRegister.length) return alert('Select at least one package (non-empty)');
+  if(!confirm(`Register ${toRegister.length} SIM(s) using bot ${bid}?`)) return;
+  const btn = document.getElementById('btnRegisterSims');
+  btn.disabled = true; btn.textContent = 'Registering…';
+  const resultEl = document.getElementById('registerResult');
+  resultEl.style.display = 'block';
+  resultEl.innerHTML = '<div class="muted">Posting to api/register_sims.php…</div>';
+  try{
+    const r = await fetch('api/register_sims.php', {method:'POST', headers: HEADERS, body: JSON.stringify({bot_id: parseInt(bid), mappings})});
+    const j = await r.json();
+    if(!j.ok) throw new Error(j.error||'unknown');
+    const lines = j.results.map(rr=>{
+      if(rr.skipped) return `<div class="log-line"><span style="color:#94a3b8">[skip]</span> ${esc(rr.simId)} — ${esc(rr.msg||rr.error||'skipped')}</div>`;
+      const col = rr.ok ? '#22c55e' : '#ef4444';
+      const detail = rr.ok ? JSON.stringify(rr.response).slice(0,180) : esc(rr.error||'fail');
+      return `<div class="log-line"><span style="color:${col}">${rr.ok?'[ok]':'[fail]'}</span> ${esc(rr.simId)} → ${esc(rr.packageId)} (http ${esc(rr.http)}) ${detail}</div>`;
+    }).join('');
+    resultEl.innerHTML = `<div style="color:#e2e8f0">Bot ${esc(bid)} — refresh cmd ${esc(j.refresh_command_id||'queued')}<br>${lines}</div>`;
+    document.getElementById('simFetchStatus').textContent = `Registered ${toRegister.length} — bot will refresh (state handler decides next move)`;
+  }catch(e){
+    resultEl.innerHTML = `<div style="color:#f87171">Register failed: ${esc(e.message)}</div>`;
+  }finally{
+    btn.disabled = false; btn.textContent = 'Register';
+  }
+}
 </script>
 </body>
 </html>

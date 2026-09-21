@@ -17,8 +17,14 @@ CREATE TABLE IF NOT EXISTS `bots` (
   `uptime` VARCHAR(64) DEFAULT NULL,
   `heartbeat_at` DATETIME DEFAULT NULL,
   `created_at` DATETIME DEFAULT CURRENT_TIMESTAMP,
-  `updated_at` DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
+  `updated_at` DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  `auth_token` TEXT DEFAULT NULL,
+  `token_updated_at` DATETIME DEFAULT NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+-- Migration for existing installs (MariaDB 10.2+ supports IF NOT EXISTS)
+ALTER TABLE `bots` ADD COLUMN IF NOT EXISTS `auth_token` TEXT DEFAULT NULL;
+ALTER TABLE `bots` ADD COLUMN IF NOT EXISTS `token_updated_at` DATETIME DEFAULT NULL;
 
 -- Bot logs: heartbeat history / state changes / free-form logs
 CREATE TABLE IF NOT EXISTS `bot_logs` (
