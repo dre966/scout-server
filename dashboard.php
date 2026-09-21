@@ -113,38 +113,33 @@ tr.selected td{background:rgba(59,130,246,.10)}
 
   <!-- FLEET PAGE -->
   <div id="tab-fleet" class="tab active">
-  <div class="grid">
     <div class="card">
       <div class="card-h"><h2>Bots <span id="botCount" style="opacity:.7">0</span></h2>
-        <span class="flex"><input id="filter" placeholder="filter" oninput="render()" style="width:140px;min-height:36px"><select id="autoPoll" onchange="resetTimer()" style="min-height:36px"><option value="2000" selected>2s</option><option value="5000">5s</option><option value="0">off</option></select></span>
+        <span class="flex"><input id="filter" placeholder="filter" oninput="render()" style="width:120px;min-height:32px"><select id="autoPoll" onchange="resetTimer()" style="min-height:32px"><option value="2000" selected>2s</option><option value="5000">5s</option><option value="0">off</option></select></span>
       </div>
-      <div class="table-wrap" style="max-height:46vh"><table><thead><tr><th>#</th><th>State</th><th>Proxy</th><th>HB</th><th></th></tr></thead><tbody id="tbody"></tbody></table></div>
+      <div class="table-wrap" style="max-height:56vh"><table><thead><tr><th>#</th><th>State</th><th>Proxy</th><th>HB</th><th></th></tr></thead><tbody id="tbody"></tbody></table></div>
       <div id="botsMuted" class="muted" style="display:none">No bots. Bots POST to <code>api/register.php</code></div>
       <div class="controls">
-        <input id="customBotId" placeholder="bot_id" type="number" style="width:90px">
+        <input id="customBotId" placeholder="bot_id" type="number" style="width:80px">
         <select id="cmdSelect" onchange="onCmdChange()"><option value="PAUSE">PAUSE</option><option value="RESUME">RESUME</option><option value="RESTART">RESTART</option><option value="STOP">STOP</option><option value="REFRESH">REFRESH</option><option value="LOGOUT">LOGOUT</option></select>
-        <input id="cmdArgs" placeholder='args JSON e.g. {"wait":60}' style="flex:1;min-width:140px">
+        <input id="cmdArgs" placeholder='args {"wait":60}' style="flex:1;min-width:110px">
         <button class="btn btn-primary" onclick="sendCustomCommand()">Send</button>
-        <span id="logoutHint" class="flex" style="display:none;width:100%"><input id="logoutWait" type="number" min="0" max="86400" value="60" style="width:96px"> <button class="btn btn-danger" onclick="sendLogout()">Logout &amp; Wait</button></span>
+        <span id="logoutHint" class="flex" style="display:none;width:100%"><input id="logoutWait" type="number" min="0" max="86400" value="60" style="width:88px"> <button class="btn btn-danger" onclick="sendLogout()">Logout &amp; Wait</button></span>
       </div>
+      <div class="muted" style="border-top:1px solid var(--line)">Tap a row → Live tab.</div>
     </div>
-    <div class="card">
-      <div class="card-h"><h2>Live <span id="liveId">—</span></h2><span class="flex"><button class="btn btn-secondary" onclick="loadLogs()">Logs</button><button class="btn btn-secondary" onclick="loadNotifications()">🔔</button></span></div>
-      <div class="controls"><button class="btn btn-secondary" onclick="sendCmd('PAUSE')">Pause</button><button class="btn btn-secondary" onclick="sendCmd('RESUME')">Resume</button><button class="btn btn-danger" onclick="sendCmd('RESTART')">Restart</button>
-        <span class="flex" style="width:100%"><input id="logoutWaitLive" type="number" min="0" max="86400" value="60" style="width:88px"><button class="btn btn-danger" onclick="sendLogoutLive()" style="flex:1">Logout &amp; Wait</button></span>
-      </div>
-      <div id="botDetail" class="muted">Tap a bot row → opens Live tab.</div>
-      <div id="logs" class="logs" style="display:none"></div>
-      <div id="notifs" class="logs" style="display:none"></div>
-    </div>
-  </div>
   </div><!-- /fleet -->
 
   <!-- LIVE PAGE -->
   <div id="tab-live" class="tab">
-    <div class="card"><div class="card-h"><h2>Live inspector</h2><span class="muted" style="padding:0">Bot <span id="liveId2">—</span></span></div>
-      <div class="controls"><button class="btn btn-secondary" onclick="loadLogs()">Logs</button><button class="btn btn-secondary" onclick="loadNotifications()">🔔</button></div>
-      <div id="liveLogs" class="logs"></div>
+    <div class="card"><div class="card-h"><h2>Live — Bot <span id="liveId">—</span></h2><span class="flex"><button class="btn btn-secondary" onclick="loadLogs()">Logs</button><button class="btn btn-secondary" onclick="loadNotifications()">🔔</button></span></div>
+      <div class="controls"><button class="btn btn-secondary" onclick="sendCmd('PAUSE')">Pause</button><button class="btn btn-secondary" onclick="sendCmd('RESUME')">Resume</button><button class="btn btn-danger" onclick="sendCmd('RESTART')">Restart</button>
+        <span class="flex" style="width:100%"><input id="logoutWaitLive" type="number" min="0" max="86400" value="60" style="width:88px"><button class="btn btn-danger" onclick="sendLogoutLive()" style="flex:1">Logout &amp; Wait</button></span>
+      </div>
+      <div id="botDetail" class="muted">No bot selected — tap a row in Fleet.</div>
+      <div id="logs" class="logs" style="display:none;max-height:46vh"></div>
+      <div id="notifs" class="logs" style="display:none;max-height:46vh"></div>
+      <div id="liveLogs" class="logs" style="display:none"></div>
     </div>
   </div>
 
@@ -287,15 +282,17 @@ function showTab(name){
 window.addEventListener('hashchange',()=>{ const h=location.hash.replace('#',''); if(['fleet','live','devices','alerts'].includes(h)) showTab(h); });
 async function selectBot(id){
   selected=id;
-  document.getElementById('liveId').textContent=id;
-  const l2=document.getElementById('liveId2'); if(l2) l2.textContent=id;
-  document.getElementById('botDetail').style.display='none';
-  document.getElementById('logs').style.display='block';
-  document.getElementById('notifs').style.display='none';
-  document.getElementById('customBotId').value=id;
+  try{ document.getElementById('liveId').textContent=id; }catch(e){}
+  try{ const l2=document.getElementById('liveId2'); if(l2) l2.textContent=id; }catch(e){}
+  try{ const c=document.getElementById('customBotId'); if(c) c.value=id; }catch(e){}
   render();
-  await loadLogs();
   showTab('live');
+  // update detail + logs
+  const det=document.getElementById('botDetail');
+  if(det){ det.style.display='block'; det.textContent='Bot '+id+' — loading…'; }
+  const logsEl=document.getElementById('logs'); if(logsEl) logsEl.style.display='block';
+  const notifsEl=document.getElementById('notifs'); if(notifsEl) notifsEl.style.display='none';
+  await loadLogs(false);
 }
 function fmtLogAge(s){
   if(!s) return '';
