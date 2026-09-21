@@ -10,23 +10,22 @@ $BOT_TOKEN = getenv('BOT_TOKEN') ?: 'scout-secret';
 <style>
 /* — Minimalist glass — optimized for Galaxy Note 9 (360×740 CSS, thumb reach) — */
 *{box-sizing:border-box;margin:0;padding:0}
-:root{--glass:rgba(255,255,255,.06);--glass-2:rgba(255,255,255,.10);--line:rgba(255,255,255,.10);--text:#e6edf7;--muted:#8a9bb4;--accent:#3b82f6;--danger:#ef4444;--ok:#22c55e;--warn:#eab308;--r:18px;--blur:22px}
+:root{--glass:rgba(255,255,255,.045);--glass-2:rgba(255,255,255,.08);--line:rgba(255,255,255,.07);--text:#e6edf7;--muted:#8ea0bd;--accent:#3b82f6;--danger:#ef4444;--ok:#22c55e;--warn:#eab308;--r:14px;--blur:14px}
 html,body{height:100%}
 body{font-family:Inter,system-ui,-apple-system,Segoe UI,Roboto,Arial,sans-serif;background:
-  radial-gradient(1100px 700px at 20% -10%, rgba(59,130,246,.22), transparent 60%),
-  radial-gradient(900px 600px at 90% 0%, rgba(139,92,246,.18), transparent 60%),
-  linear-gradient(180deg,#070b16 0%,#0a1226 55%,#070b16 100%);color:var(--text);line-height:1.45;-webkit-font-smoothing:antialiased}
+  radial-gradient(900px 600px at 20% -10%, rgba(59,130,246,.14), transparent 65%),
+  linear-gradient(180deg,#070b14 0%,#0a1226 100%);color:var(--text);line-height:1.4;-webkit-font-smoothing:antialiased}
 a{color:inherit}
-header{position:sticky;top:0;z-index:20;display:flex;align-items:center;gap:10px;padding:10px 12px;
-  background:rgba(10,18,38,.55);backdrop-filter:blur(var(--blur)) saturate(160%);-webkit-backdrop-filter:blur(var(--blur)) saturate(160%);
+header{position:sticky;top:0;z-index:20;display:flex;align-items:center;gap:8px;padding:7px 10px;
+  background:rgba(10,18,38,.42);backdrop-filter:blur(10px);-webkit-backdrop-filter:blur(10px);
   border-bottom:1px solid var(--line)}
-header h1{font-size:15px;font-weight:800;letter-spacing:.02em;flex:1;min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-.meta{font-size:11px;color:var(--muted);white-space:nowrap}
-.wrap{max-width:1100px;margin:0 auto;padding:10px 10px 88px}
-.card{background:var(--glass);backdrop-filter:blur(var(--blur)) saturate(150%);-webkit-backdrop-filter:blur(var(--blur)) saturate(150%);
-  border:1px solid var(--line);border-radius:var(--r);overflow:hidden;box-shadow:0 10px 40px rgba(0,0,0,.35), inset 0 1px 0 rgba(255,255,255,.06);margin-bottom:12px}
-.card-h{display:flex;align-items:center;justify-content:space-between;gap:8px;padding:11px 12px;border-bottom:1px solid var(--line);background:rgba(255,255,255,.03)}
-.card-h h2{font-size:12px;font-weight:800;letter-spacing:.06em;text-transform:uppercase;color:#cbd5e1}
+header h1{font-size:13px;font-weight:800;letter-spacing:.03em;flex:1;min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.meta{font-size:10px;color:var(--muted);white-space:nowrap}
+.wrap{max-width:1100px;margin:0 auto;padding:6px 6px 72px}
+.card{background:var(--glass);backdrop-filter:blur(10px);-webkit-backdrop-filter:blur(10px);
+  border:1px solid var(--line);border-radius:var(--r);overflow:hidden;box-shadow:none;margin-bottom:8px}
+.card-h{display:flex;align-items:center;justify-content:space-between;gap:6px;padding:8px 10px;border-bottom:1px solid var(--line);background:transparent}
+.card-h h2{font-size:10px;font-weight:800;letter-spacing:.07em;text-transform:uppercase;color:#9fb0cc}
 .badge{padding:2px 8px;border-radius:999px;font-size:11px;font-weight:800;display:inline-block}
 .badge-green{background:rgba(34,197,94,.15);color:#86efac;border:1px solid rgba(34,197,94,.3)}
 .badge-yellow{background:rgba(234,179,8,.14);color:#fde68a;border:1px solid rgba(234,179,8,.3)}
@@ -36,36 +35,36 @@ header h1{font-size:15px;font-weight:800;letter-spacing:.02em;flex:1;min-width:0
 .dot-green{background:var(--ok);box-shadow:0 0 8px rgba(34,197,94,.7)}
 .dot-yellow{background:var(--warn);box-shadow:0 0 8px rgba(234,179,8,.7)}
 .dot-red{background:var(--danger);box-shadow:0 0 8px rgba(239,68,68,.7)}
-.controls{display:flex;flex-wrap:wrap;gap:8px;padding:10px}
-.controls input,.controls select{padding:10px 10px;border-radius:12px;border:1px solid var(--line);background:rgba(255,255,255,.06);color:var(--text);font-size:13px;min-height:44px;outline:none}
-.controls input:focus,.controls select:focus{border-color:rgba(59,130,246,.5);background:rgba(255,255,255,.09)}
-.btn{padding:10px 14px;border:none;border-radius:12px;cursor:pointer;font-weight:800;font-size:12px;letter-spacing:.02em;min-height:44px;transition:.15s}
+.controls{display:flex;flex-wrap:wrap;gap:6px;padding:8px}
+.controls input,.controls select{padding:7px 9px;border-radius:10px;border:1px solid var(--line);background:rgba(255,255,255,.05);color:var(--text);font-size:12px;min-height:36px;outline:none}
+.controls input:focus,.controls select:focus{border-color:rgba(59,130,246,.4);background:rgba(255,255,255,.07)}
+.btn{padding:7px 11px;border:none;border-radius:10px;cursor:pointer;font-weight:700;font-size:11px;letter-spacing:.01em;min-height:36px;transition:.12s}
 .btn:active{transform:scale(.98)}
-.btn-primary{background:linear-gradient(180deg,#3b82f6,#2563eb);color:#fff;box-shadow:0 6px 18px rgba(37,99,235,.35)}
-.btn-secondary{background:rgba(255,255,255,.08);color:var(--text);border:1px solid var(--line);backdrop-filter:blur(8px)}
-.btn-danger{background:rgba(239,68,68,.16);color:#fecaca;border:1px solid rgba(239,68,68,.3)}
+.btn-primary{background:#2563eb;color:#fff;box-shadow:none}
+.btn-secondary{background:rgba(255,255,255,.06);color:var(--text);border:1px solid var(--line)}
+.btn-danger{background:rgba(239,68,68,.11);color:#fecaca;border:1px solid rgba(239,68,68,.22)}
 .btn:disabled{opacity:.5;cursor:not-allowed}
 .table-wrap{overflow:auto;-webkit-overflow-scrolling:touch}
-table{width:100%;border-collapse:separate;border-spacing:0;font-size:12px;min-width:680px}
-th,td{padding:9px 10px;text-align:left;border-bottom:1px solid var(--line);white-space:nowrap}
-th{position:sticky;top:0;background:rgba(10,18,38,.75);backdrop-filter:blur(10px);color:var(--muted);font-weight:700;letter-spacing:.04em;text-transform:uppercase;font-size:10px}
-tr:hover td{background:rgba(255,255,255,.03)}
-tr.selected td{background:rgba(59,130,246,.12)}
-.logs{max-height:42vh;overflow:auto;padding:8px;font-family:ui-monospace,Consolas,monospace;font-size:11px;background:rgba(0,0,0,.22);border-top:1px solid var(--line)}
-.log-line{padding:5px 0;border-bottom:1px solid rgba(255,255,255,.06);word-break:break-all}
+table{width:100%;border-collapse:separate;border-spacing:0;font-size:11px;min-width:0}
+th,td{padding:6px 8px;text-align:left;border-bottom:1px solid var(--line);white-space:nowrap}
+th{position:sticky;top:0;background:rgba(10,18,38,.6);backdrop-filter:blur(6px);color:var(--muted);font-weight:700;letter-spacing:.04em;text-transform:uppercase;font-size:9px}
+tr:hover td{background:rgba(255,255,255,.02)}
+tr.selected td{background:rgba(59,130,246,.10)}
+.logs{max-height:38vh;overflow:auto;padding:6px;font-family:ui-monospace,Consolas,monospace;font-size:10px;background:rgba(0,0,0,.14);border-top:1px solid var(--line)}
+.log-line{padding:4px 0;border-bottom:1px solid rgba(255,255,255,.04);word-break:break-all}
 .log-time{color:#7a8aa6}
 .log-state{color:#7dd3fc}
-.muted{color:var(--muted);font-size:12px;padding:8px 12px}
+.muted{color:var(--muted);font-size:11px;padding:6px 10px}
 .flex{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
 .grid{display:grid;gap:12px}
 /* — tabbed pages — */
 .tab{display:none}
 .tab.active{display:block;animation:fade .18s ease}
 @keyframes fade{from{opacity:0;transform:translateY(4px)}to{opacity:1;transform:translateY(0)}}
-.nav{position:fixed;bottom:0;left:0;right:0;z-index:30;display:flex;gap:6px;padding:8px 8px calc(8px + env(safe-area-inset-bottom));background:rgba(7,11,22,.72);backdrop-filter:blur(20px) saturate(160%);border-top:1px solid var(--line)}
-.nav button{flex:1;display:flex;flex-direction:column;align-items:center;gap:2px;padding:8px 4px;border-radius:14px;border:1px solid transparent;background:transparent;color:var(--muted);font-weight:800;font-size:10px;letter-spacing:.06em;text-transform:uppercase}
-.nav button.active{background:rgba(255,255,255,.08);border-color:var(--line);color:var(--text);box-shadow:inset 0 1px 0 rgba(255,255,255,.06)}
-.nav button span.i{font-size:16px;line-height:1}
+.nav{position:fixed;bottom:0;left:0;right:0;z-index:30;display:flex;gap:4px;padding:6px 6px calc(6px + env(safe-area-inset-bottom));background:rgba(7,11,22,.55);backdrop-filter:blur(12px);border-top:1px solid var(--line)}
+.nav button{flex:1;display:flex;flex-direction:column;align-items:center;gap:1px;padding:6px 2px;border-radius:12px;border:1px solid transparent;background:transparent;color:var(--muted);font-weight:700;font-size:9px;letter-spacing:.06em;text-transform:uppercase}
+.nav button.active{background:rgba(255,255,255,.06);border-color:var(--line);color:var(--text)}
+.nav button span.i{font-size:14px;line-height:1}
 .top-tabs{display:flex;gap:6px;padding:0 10px 8px}
 .top-tabs button{padding:6px 10px;border-radius:999px;font-size:11px;font-weight:800;border:1px solid var(--line);background:rgba(255,255,255,.06);color:var(--muted)}
 .top-tabs button.active{background:#fff;color:#0a1226;border-color:#fff}
@@ -119,7 +118,7 @@ tr.selected td{background:rgba(59,130,246,.12)}
       <div class="card-h"><h2>Bots <span id="botCount" style="opacity:.7">0</span></h2>
         <span class="flex"><input id="filter" placeholder="filter" oninput="render()" style="width:140px;min-height:36px"><select id="autoPoll" onchange="resetTimer()" style="min-height:36px"><option value="2000" selected>2s</option><option value="5000">5s</option><option value="0">off</option></select></span>
       </div>
-      <div class="table-wrap" style="max-height:42vh"><table><thead><tr><th>#</th><th>State</th><th>Sims</th><th>Proxy</th><th>Heartbeat</th><th>URL</th><th></th></tr></thead><tbody id="tbody"></tbody></table></div>
+      <div class="table-wrap" style="max-height:46vh"><table><thead><tr><th>#</th><th>State</th><th>Proxy</th><th>HB</th><th></th></tr></thead><tbody id="tbody"></tbody></table></div>
       <div id="botsMuted" class="muted" style="display:none">No bots. Bots POST to <code>api/register.php</code></div>
       <div class="controls">
         <input id="customBotId" placeholder="bot_id" type="number" style="width:90px">
@@ -244,12 +243,10 @@ function render(){
   tbody.innerHTML = filtered.map(b=>`
     <tr class="${selected==b.id?'selected':''}" onclick="selectBot(${b.id})" style="cursor:pointer">
       <td><b>${esc(b.id)}</b></td>
-      <td><span class="badge ${b.state==='running'?'badge-green':b.state==='paused'?'badge-yellow':'badge-gray'}">${esc(b.state||'—')}</span></td>
-      <td>${esc(b.sims_count??0)}</td>
-      <td title="${esc(b.proxy_email)}">${esc((b.proxy_email||'').slice(0,20))}</td>
+      <td><span class="badge ${b.state==='running'?'badge-green':b.state==='paused'?'badge-yellow':'badge-gray'}" style="font-size:10px;padding:1px 6px">${esc((b.state||'—').slice(0,14))}</span></td>
+      <td title="${esc(b.proxy_email)}">${esc((b.proxy_email||'').split('@')[0].slice(0,16))}</td>
       <td>${fmtAge(b.heartbeat_at)}</td>
-      <td title="${esc(b.current_url)}">${esc((b.current_url||'').slice(0,22))}</td>
-      <td><button class="btn btn-secondary" onclick="event.stopPropagation(); selectBot(${b.id}); sendCmd('RESTART')" style="min-height:32px;padding:6px 10px">↻</button></td>
+      <td><button class="btn btn-secondary" onclick="event.stopPropagation(); selectBot(${b.id}); sendCmd('RESTART')" style="min-height:28px;padding:4px 8px;font-size:10px">↻</button></td>
     </tr>
   `).join('');
 }
