@@ -132,7 +132,7 @@ tr.selected td{background:rgba(59,130,246,.10)}
 
   <!-- LIVE PAGE -->
   <div id="tab-live" class="tab">
-    <div class="card"><div class="card-h"><h2>Live — Bot <span id="liveId">—</span></h2><span class="flex"><button class="btn btn-secondary" onclick="loadLogs()">Logs</button><button class="btn btn-secondary" onclick="loadNotifications()">🔔</button><button class="btn btn-primary" onclick="openCallStatus()">Call Status</button></span></div>
+    <div class="card"><div class="card-h"><h2>Live — Bot <span id="liveId">—</span></h2><span class="flex"><button class="btn btn-secondary" onclick="loadLogs()">Logs</button><button class="btn btn-secondary" onclick="loadNotifications()">🔔</button></span></div>
       <div class="controls"><button class="btn btn-secondary" onclick="sendCmd('PAUSE')">Pause</button><button class="btn btn-secondary" onclick="sendCmd('RESUME')">Resume</button><button class="btn btn-danger" onclick="sendCmd('RESTART')">Restart</button>
         <span class="flex" style="width:100%"><input id="logoutWaitLive" type="number" min="0" max="86400" value="60" style="width:88px"><button class="btn btn-danger" onclick="sendLogoutLive()" style="flex:1">Logout &amp; Wait</button></span>
       </div>
@@ -160,9 +160,10 @@ tr.selected td{background:rgba(59,130,246,.10)}
     <div id="tokenStatus" class="muted">No tokens yet.</div>
     <div class="controls" id="postTokenControls" style="display:none">
       <button class="btn btn-primary" onclick="goToSite()">↗ Go to site</button>
+      <button class="btn btn-primary" onclick="openCallStatus()">Call Status</button>
       <button class="btn btn-danger" onclick="deleteAccountNow()">Delete Account</button>
       <button class="btn btn-primary" onclick="openSimRegisterFlow()">Register SIMs</button>
-      <span class="muted" style="font-size:11px">Select checkbox first. Go to site opens Scout in new tab (token auto-copied).</span>
+      <span class="muted" style="font-size:11px">Select checkbox — Call Status queries server directly with that bot's token.</span>
     </div>
     <div id="simMappingArea" style="display:none;border-top:1px solid var(--line);padding:10px">
       <div class="flex" style="margin-bottom:8px"><label style="font-size:13px">Device <select id="simBotSelect"></select></label><button class="btn btn-secondary" onclick="fetchSimsAndPackages()">Fetch SIMs &amp; Packages</button><span id="simFetchStatus" class="muted"></span></div>
@@ -522,8 +523,9 @@ function goToSite(){
   }
 }
 function openCallStatus(){
-  if(!selected) return alert('Select a bot first (tap row in Fleet)');
-  document.getElementById('csBotId').textContent=selected;
+  const bid=getSelectedBotId();
+  if(!bid) return alert('Select a device (checkbox) in Devices');
+  document.getElementById('csBotId').textContent=bid;
   document.getElementById('csUpdated').textContent='';
   document.getElementById('csBody').innerHTML='<div class="muted">Loading…</div>';
   document.getElementById('callStatusOverlay').style.display='flex';
@@ -531,7 +533,7 @@ function openCallStatus(){
 }
 function closeCallStatus(){ document.getElementById('callStatusOverlay').style.display='none'; }
 async function refreshCallStatus(){
-  const bid=selected; if(!bid) return;
+  const bid=getSelectedBotId()||selected; if(!bid) return;
   const body=document.getElementById('csBody'); const upd=document.getElementById('csUpdated');
   try{
     let sims=[], updated=null;
