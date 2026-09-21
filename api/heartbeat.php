@@ -33,7 +33,7 @@ if ($bot_id === null) {
 }
 
 try {
-    // Update bots table
+    // Postgres: update first
     $stmt = $pdo->prepare("UPDATE bots SET
         state = COALESCE(:state, state),
         sims_count = COALESCE(:sims_count, sims_count),
@@ -50,11 +50,10 @@ try {
         ':id' => (int)$bot_id
     ]);
 
-    // If bot row didn't exist, create it
     if ($stmt->rowCount() === 0) {
         $ins = $pdo->prepare("INSERT INTO bots (id, state, sims_count, current_url, uptime, heartbeat_at, created_at)
             VALUES (:id, :state, :sims_count, :current_url, :uptime, NOW(), NOW())
-            ON DUPLICATE KEY UPDATE state=VALUES(state), sims_count=VALUES(sims_count), current_url=VALUES(current_url), uptime=VALUES(uptime), heartbeat_at=NOW()");
+            ON CONFLICT (id) DO UPDATE SET state=EXCLUDED.state, sims_count=EXCLUDED.sims_count, current_url=EXCLUDED.current_url, uptime=EXCLUDED.uptime, heartbeat_at=NOW(), updated_at=NOW()");
         $ins->execute([
             ':id' => (int)$bot_id,
             ':state' => $state,
@@ -64,7 +63,6 @@ try {
         ]);
     }
 
-    // Insert into bot_logs for history
     $log = $pdo->prepare("INSERT INTO bot_logs (bot_id, state, sims_count, current_url, uptime, message, level) VALUES (:bot_id, :state, :sims_count, :current_url, :uptime, :message, 'info')");
     $log->execute([
         ':bot_id' => (int)$bot_id,

@@ -32,41 +32,23 @@ if ($bot_id === null || $type === null) {
 
 try {
     $detailsJson = $details !== null ? (is_string($details) ? $details : json_encode($details)) : null;
-    // Ensure priority column exists (high priority for NoSimsRegistered)
-    try { $pdo->exec("ALTER TABLE notifications ADD COLUMN IF NOT EXISTS priority VARCHAR(16) DEFAULT NULL"); } catch (Exception $e) {}
-    try { $pdo->exec("ALTER TABLE notifications ADD COLUMN IF NOT EXISTS `priority` VARCHAR(16) DEFAULT NULL"); } catch (Exception $ignored) {}
     $priority = $data['priority'] ?? null;
     if (!$priority && $type === 'NoSimsRegistered') $priority = 'high';
-    $hasPriority = false;
-    try {
-        $col = $pdo->query("SHOW COLUMNS FROM notifications LIKE 'priority'")->fetch();
-        $hasPriority = !!$col;
-    } catch (Exception $e) {}
-    if ($hasPriority) {
-        $stmt = $pdo->prepare("INSERT INTO notifications (bot_id, type, message, details, priority, created_at) VALUES (:bot_id, :type, :message, :details, :priority, NOW())");
-        $stmt->execute([
-            ':bot_id' => (int)$bot_id,
-            ':type' => $type,
-            ':message' => $message,
-            ':details' => $detailsJson,
-            ':priority' => $priority
-        ]);
-    } else {
-        $stmt = $pdo->prepare("INSERT INTO notifications (bot_id, type, message, details, created_at) VALUES (:bot_id, :type, :message, :details, NOW())");
-        $stmt->execute([
-            ':bot_id' => (int)$bot_id,
-            ':type' => $type,
-            ':message' => $message,
-            ':details' => $detailsJson
-        ]);
-    }
+
+    // Postgres: priority column exists in schema.sql; no SHOW COLUMNS check needed
+    $stmt = $pdo->prepare("INSERT INTO notifications (bot_id, type, message, details, priority, created_at) VALUES (:bot_id, :type, :message, :details, :priority, NOW())");
+    $stmt->execute([
+        ':bot_id' => (int)$bot_id,
+        ':type' => $type,
+        ':message' => $message,
+        ':details' => $detailsJson,
+        ':priority' => $priority
+    ]);
     $nid = $pdo->lastInsertId();
 
-    // Also log
     $log = $pdo->prepare("INSERT INTO bot_logs (bot_id, message, level) VALUES (:bot_id, :msg, 'warn')");
     $log->execute([':bot_id' => (int)$bot_id, ':msg' => "notify {$type}: {$message}"]);
 
-    // Optional Telegram webhook
     $tgToken = getenv('TELEGRAM_BOT_TOKEN') ?: '';
     $tgChat  = getenv('TELEGRAM_CHAT_ID') ?: '';
     $tgUrl   = getenv('TELEGRAM_WEBHOOK_URL') ?: '';

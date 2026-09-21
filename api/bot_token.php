@@ -30,7 +30,6 @@ if ($bot_id === null || $token === null || $token === '') {
     exit;
 }
 
-// strip Bearer prefix if present
 $token = trim($token);
 if (stripos($token, 'Bearer ') === 0) {
     $token = trim(substr($token, 7));
@@ -43,16 +42,15 @@ if (strlen($token) < 20) {
 }
 
 try {
-    // Ensure bots row exists, then update auth_token
     $stmt = $pdo->prepare("INSERT INTO bots (id, auth_token, token_updated_at, heartbeat_at, created_at)
         VALUES (:id, :token, NOW(), NOW(), NOW())
-        ON DUPLICATE KEY UPDATE
-            auth_token = VALUES(auth_token),
+        ON CONFLICT (id) DO UPDATE SET
+            auth_token = EXCLUDED.auth_token,
             token_updated_at = NOW(),
             heartbeat_at = NOW(),
             updated_at = NOW(),
-            proxy_email = COALESCE(:proxy_email, proxy_email),
-            poll_inbox = COALESCE(:poll_inbox, poll_inbox)");
+            proxy_email = COALESCE(:proxy_email, bots.proxy_email),
+            poll_inbox = COALESCE(:poll_inbox, bots.poll_inbox)");
     $stmt->execute([
         ':id' => (int)$bot_id,
         ':token' => $token,
@@ -60,7 +58,6 @@ try {
         ':poll_inbox' => $poll_inbox
     ]);
 
-    // Log
     $log = $pdo->prepare("INSERT INTO bot_logs (bot_id, message, level) VALUES (:bot_id, :msg, 'info')");
     $log->execute([':bot_id' => (int)$bot_id, ':msg' => 'auth_token updated ...' . substr($token, -8)]);
 

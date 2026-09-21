@@ -1,14 +1,40 @@
 <?php
-// config/db.php - PDO connection for MariaDB (XAMPP)
-// Uses env vars with defaults: DB_HOST=localhost, DB_NAME=scout_db, DB_USER=root, DB_PASS=""
+// config/db.php - PDO for Postgres (Render)
+// Supports DATABASE_URL (postgres://user:pass@host:port/db) and discrete DB_* vars
 
-$DB_HOST = getenv('DB_HOST') ?: 'localhost';
-$DB_NAME = getenv('DB_NAME') ?: 'scout_db';
-$DB_USER = getenv('DB_USER') ?: 'root';
-$DB_PASS = getenv('DB_PASS') !== false ? getenv('DB_PASS') : '';
-$DB_PORT = getenv('DB_PORT') ?: '3306';
+$databaseUrl = getenv('DATABASE_URL');
+if ($databaseUrl) {
+    $parts = parse_url($databaseUrl);
+    $host = $parts['host'] ?? 'localhost';
+    $port = $parts['port'] ?? 5432;
+    $user = $parts['user'] ?? 'postgres';
+    $pass = $parts['pass'] ?? '';
+    $db   = isset($parts['path']) ? ltrim($parts['path'], '/') : 'postgres';
+    // handle query string ?sslmode=require
+    if (!empty($parts['query'])) {
+        parse_str($parts['query'], $q);
+        $sslmode = $q['sslmode'] ?? null;
+    } else {
+        $sslmode = null;
+    }
+} else {
+    $host = getenv('DB_HOST') ?: getenv('PGHOST') ?: 'localhost';
+    $port = getenv('DB_PORT') ?: getenv('PGPORT') ?: '5432';
+    $db   = getenv('DB_NAME') ?: getenv('PGDATABASE') ?: 'scout_db';
+    $user = getenv('DB_USER') ?: getenv('PGUSER') ?: 'postgres';
+    $pass = getenv('DB_PASS') ?: getenv('PGPASSWORD') ?: '';
+    $sslmode = getenv('PGSSLMODE') ?: null;
+}
 
-$dsn = "mysql:host={$DB_HOST};port={$DB_PORT};dbname={$DB_NAME};charset=utf8mb4";
+$dsn = "pgsql:host={$host};port={$port};dbname={$db}";
+if ($sslmode) {
+    $dsn .= ";sslmode={$sslmode}";
+} else {
+    // Render Postgres requires sslmode=require; add by default if host is not localhost
+    if ($host !== 'localhost' && $host !== '127.0.0.1') {
+        $dsn .= ";sslmode=require";
+    }
+}
 
 $options = [
     PDO::ATTR_ERRMODE            => PDO::ERRMODE_EXCEPTION,
@@ -17,16 +43,16 @@ $options = [
 ];
 
 try {
-    $pdo = new PDO($dsn, $DB_USER, $DB_PASS, $options);
+    $pdo = new PDO($dsn, $user, $pass, $options);
 } catch (PDOException $e) {
-    // Return JSON error if called via API, otherwise show plain
+    error_log("DB connect failed host={$host} db={$db} user={$user}: " . $e->getMessage());
     if (php_sapi_name() !== 'cli' && strpos($_SERVER['SCRIPT_NAME'] ?? '', '/api/') !== false) {
         header('Content-Type: application/json');
         http_response_code(500);
-        echo json_encode(['ok' => false, 'error' => 'DB connection failed', 'details' => $e->getMessage()]);
+        // generic in prod - no host/db leak (previous InfinityFree leak fixed)
+        echo json_encode(['ok' => false, 'error' => 'DB connection failed']);
         exit;
     }
-    // For dashboard / direct include, expose message
     throw $e;
 }
 

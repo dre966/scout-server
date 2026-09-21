@@ -5,7 +5,6 @@ header('Access-Control-Allow-Methods: GET, POST, OPTIONS');
 header('Access-Control-Allow-Headers: Content-Type, X-Bot-Token');
 if ($_SERVER['REQUEST_METHOD'] === 'OPTIONS') { http_response_code(204); exit; }
 
-// Auth: X-Bot-Token vs BOT_TOKEN env (default scout-secret)
 $expected = getenv('BOT_TOKEN') ?: 'scout-secret';
 $provided = $_SERVER['HTTP_X_BOT_TOKEN'] ?? '';
 if ($provided !== $expected) {
@@ -20,7 +19,6 @@ $raw = file_get_contents('php://input');
 $data = json_decode($raw, true);
 if (!is_array($data)) $data = $_POST;
 
-// Support both JSON and form
 $bot_id       = $data['bot_id'] ?? $data['id'] ?? null;
 $proxy_email  = $data['proxy_email'] ?? null;
 $poll_inbox   = $data['poll_inbox'] ?? null;
@@ -33,13 +31,12 @@ if ($bot_id === null || $bot_id === '') {
 }
 
 try {
-    // INSERT ... ON DUPLICATE KEY UPDATE
     $stmt = $pdo->prepare("INSERT INTO bots (id, proxy_email, poll_inbox, container_id, heartbeat_at, created_at)
         VALUES (:id, :proxy_email, :poll_inbox, :container_id, NOW(), NOW())
-        ON DUPLICATE KEY UPDATE
-            proxy_email = VALUES(proxy_email),
-            poll_inbox = VALUES(poll_inbox),
-            container_id = VALUES(container_id),
+        ON CONFLICT (id) DO UPDATE SET
+            proxy_email = EXCLUDED.proxy_email,
+            poll_inbox = EXCLUDED.poll_inbox,
+            container_id = EXCLUDED.container_id,
             heartbeat_at = NOW(),
             updated_at = NOW()");
     $stmt->execute([
@@ -49,7 +46,6 @@ try {
         ':container_id' => $container_id
     ]);
 
-    // Log registration
     $log = $pdo->prepare("INSERT INTO bot_logs (bot_id, message, level) VALUES (:bot_id, :msg, 'info')");
     $log->execute([':bot_id' => (int)$bot_id, ':msg' => 'registered container=' . $container_id]);
 
