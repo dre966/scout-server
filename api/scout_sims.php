@@ -40,11 +40,36 @@ try {
     if($err){ http_response_code(502); echo json_encode(['ok'=>false,'error'=>'auth/me curl '.$err]); exit; }
     if($http>=400){ http_response_code($http); echo json_encode(['ok'=>false,'error'=>'auth/me failed','http'=>$http,'body'=>substr($resp,0,600)]); exit; }
     $me=json_decode($resp,true);
-    $role=$me['user']['role'] ?? $me['role'] ?? $me['data']['role'] ?? null;
+    $role=$me['user']['role'] ?? $me['role'] ?? $me['data']['role'] ?? $me['user']['roleData']['role'] ?? null;
     if($role!=='scout'){
-        // not scout — return empty with role for dashboard to show
-        echo json_encode(['ok'=>true,'bot_id'=>(int)$bot_id,'role'=>$role,'sims'=>[],'count'=>0,'note'=>'role is '.$role.' not scout']);
-        exit;
+        // try to switch to scout (as bot does) — use same Bearer
+        $ch=curl_init('https://scoutandrunner.com/api/auth/switch-role');
+        curl_setopt_array($ch,[
+            CURLOPT_RETURNTRANSFER=>true, CURLOPT_TIMEOUT=>10,
+            CURLOPT_POST=>true, CURLOPT_POSTFIELDS=>json_encode(new stdClass()),
+            CURLOPT_HTTPHEADER=>['authorization: Bearer '.$token,'content-type: application/json','accept: application/json','referer: https://scoutandrunner.com/scout/sims'],
+            CURLOPT_SSL_VERIFYPEER=>true,
+        ]);
+        $sresp=curl_exec($ch); curl_close($ch);
+        sleep(1);
+        // re-check role
+        $ch=curl_init('https://scoutandrunner.com/api/auth/me');
+        curl_setopt_array($ch,[CURLOPT_RETURNTRANSFER=>true, CURLOPT_TIMEOUT=>10, CURLOPT_HTTPHEADER=>$authHeaders, CURLOPT_SSL_VERIFYPEER=>true]);
+        $resp=curl_exec($ch); $http=curl_getinfo($ch,CURLINFO_HTTP_CODE); curl_close($ch);
+        $me=json_decode($resp,true);
+        $role=$me['user']['role'] ?? $me['role'] ?? null;
+        if($role!=='scout'){
+            // fallback: still return runner sims so Call Status isn't empty — fetch /runner/sims for this bot
+            $ch=curl_init('https://scoutandrunner.com/api/runner/sims');
+            curl_setopt_array($ch,[CURLOPT_RETURNTRANSFER=>true, CURLOPT_TIMEOUT=>10, CURLOPT_HTTPHEADER=>['authorization: Bearer '.$token,'accept: application/json','referer: https://scoutandrunner.com/runner/sims'], CURLOPT_SSL_VERIFYPEER=>true]);
+            $rresp=curl_exec($ch); $rhttp=curl_getinfo($ch,CURLINFO_HTTP_CODE); curl_close($ch);
+            $rdata=json_decode($rresp,true);
+            $rsims=$rdata['sims']??$rdata['data']??$rdata;
+            $rout=[];
+            foreach(($rsims?:[]) as $it){ $sim=$it['sim']??$it; $rout[]=['id'=>$sim['id']??null,'phoneNumber'=>$sim['phoneNumber']??'?','status'=>$sim['status']??'?','testsInCycle'=>$sim['testsInCycle']??0,'cooldownEndsAt'=>$sim['cooldownEndsAt']??null,'carrier'=>$sim['carrier']??'?','raw'=>$it]; }
+            echo json_encode(['ok'=>true,'bot_id'=>(int)$bot_id,'role'=>$role,'sims'=>$rout,'count'=>count($rout),'note'=>'switched to scout failed, returned runner sims']);
+            exit;
+        }
     }
 
     // Now fetch scout sims exactly as you specified
