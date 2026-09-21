@@ -151,9 +151,10 @@ tr.selected td{background:rgba(59,130,246,.10)}
     <div class="table-wrap" style="max-height:32vh"><table><thead><tr><th><input type="checkbox" id="chkAll" onchange="toggleAll(this.checked)"></th><th>Bot</th><th>Proxy</th><th>Token</th><th>State</th><th>HB</th></tr></thead><tbody id="tokenTbody"></tbody></table></div>
     <div id="tokenStatus" class="muted">No tokens yet.</div>
     <div class="controls" id="postTokenControls" style="display:none">
+      <button class="btn btn-primary" onclick="goToSite()">↗ Go to site</button>
       <button class="btn btn-danger" onclick="openDeleteModal()">Delete Account</button>
       <button class="btn btn-primary" onclick="openSimRegisterFlow()">Register SIMs</button>
-      <span class="muted" style="font-size:11px">Select checkbox first. Deletes via <code>DELETE /auth/delete-account</code>.</span>
+      <span class="muted" style="font-size:11px">Select checkbox first. Go to site opens Scout in new tab (token auto-copied).</span>
     </div>
     <div id="simMappingArea" style="display:none;border-top:1px solid var(--line);padding:10px">
       <div class="flex" style="margin-bottom:8px"><label style="font-size:13px">Device <select id="simBotSelect"></select></label><button class="btn btn-secondary" onclick="fetchSimsAndPackages()">Fetch SIMs &amp; Packages</button><span id="simFetchStatus" class="muted"></span></div>
@@ -493,6 +494,21 @@ async function registerSims(){
     resultEl.innerHTML = j.results.map(rr=> rr.skipped ? `<div class="log-line" style="color:var(--muted)">[skip] ${esc(rr.simId)}</div>` : `<div class="log-line"><span style="color:${rr.ok?'var(--ok)':'var(--danger)'}">${rr.ok?'[ok]':'[fail]'}</span> ${esc(rr.simId)} → ${esc(rr.packageId)} (http ${esc(rr.http)}) ${esc((rr.error||JSON.stringify(rr.response||'')).slice(0,120))}</div>`).join('');
   }catch(e){ resultEl.innerHTML = `<div style="color:#f87171">Failed: ${esc(e.message)}</div>`; }
   finally{ btn.disabled = false; btn.textContent = 'Register'; }
+}
+function goToSite(){
+  const bid=getSelectedBotId();
+  if(!bid) return alert('Select device checkbox first');
+  const bot=bots.find(b=>String(b.id)===String(bid));
+  const token=bot?.auth_token||'';
+  if(token){
+    try{ navigator.clipboard.writeText(token); }catch(e){}
+    // Try to set token in new tab via helper page (sets localStorage then redirects)
+    const helper = `api/goto.php?bot_id=${encodeURIComponent(bid)}`;
+    window.open(helper,'_blank');
+  } else {
+    window.open('https://scoutandrunner.com/scout','_blank');
+    alert('No token stored for bot '+bid+' — Load tokens first. Opened Scout login.');
+  }
 }
 // — delete account glass —
 function openDeleteModal(){
