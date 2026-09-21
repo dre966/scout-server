@@ -32,13 +32,34 @@ if ($bot_id === null || $type === null) {
 
 try {
     $detailsJson = $details !== null ? (is_string($details) ? $details : json_encode($details)) : null;
-    $stmt = $pdo->prepare("INSERT INTO notifications (bot_id, type, message, details, created_at) VALUES (:bot_id, :type, :message, :details, NOW())");
-    $stmt->execute([
-        ':bot_id' => (int)$bot_id,
-        ':type' => $type,
-        ':message' => $message,
-        ':details' => $detailsJson
-    ]);
+    // Ensure priority column exists (high priority for NoSimsRegistered)
+    try { $pdo->exec("ALTER TABLE notifications ADD COLUMN IF NOT EXISTS priority VARCHAR(16) DEFAULT NULL"); } catch (Exception $e) {}
+    try { $pdo->exec("ALTER TABLE notifications ADD COLUMN IF NOT EXISTS `priority` VARCHAR(16) DEFAULT NULL"); } catch (Exception $ignored) {}
+    $priority = $data['priority'] ?? null;
+    if (!$priority && $type === 'NoSimsRegistered') $priority = 'high';
+    $hasPriority = false;
+    try {
+        $col = $pdo->query("SHOW COLUMNS FROM notifications LIKE 'priority'")->fetch();
+        $hasPriority = !!$col;
+    } catch (Exception $e) {}
+    if ($hasPriority) {
+        $stmt = $pdo->prepare("INSERT INTO notifications (bot_id, type, message, details, priority, created_at) VALUES (:bot_id, :type, :message, :details, :priority, NOW())");
+        $stmt->execute([
+            ':bot_id' => (int)$bot_id,
+            ':type' => $type,
+            ':message' => $message,
+            ':details' => $detailsJson,
+            ':priority' => $priority
+        ]);
+    } else {
+        $stmt = $pdo->prepare("INSERT INTO notifications (bot_id, type, message, details, created_at) VALUES (:bot_id, :type, :message, :details, NOW())");
+        $stmt->execute([
+            ':bot_id' => (int)$bot_id,
+            ':type' => $type,
+            ':message' => $message,
+            ':details' => $detailsJson
+        ]);
+    }
     $nid = $pdo->lastInsertId();
 
     // Also log

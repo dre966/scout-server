@@ -49,6 +49,7 @@ tr.selected{background:#1e3a5f}
 </style>
 </head>
 <body>
+<div id="noSimsAlert" style="display:none;background:#7f1d1d;color:#fecaca;padding:10px 16px;border:1px solid #dc2626;margin:12px 12px 0 12px;border-radius:8px;font-weight:700"></div>
 <header>
   <h1>🛰️ Scout Fleet Dashboard</h1>
   <span class="meta" id="status">polling…</span>
@@ -196,9 +197,29 @@ function render(){
 }
 function renderGlobalNotifs(list){
   const el=document.getElementById('globalNotifs');
+  const alertEl=document.getElementById('noSimsAlert');
+  // show red banner if any NoSimsRegistered in recent list
+  const noSims = list.filter(n=> String(n.type||'').toLowerCase()==='nosimsregistered');
+  if(alertEl){
+    if(noSims.length){
+      const latest = noSims[0];
+      alertEl.style.display='block';
+      alertEl.innerHTML='🚨 NoSimsRegistered — Bot '+esc(latest.bot_id)+' : '+esc(latest.message)+' <span style="font-weight:400;color:#fecaca">('+esc(latest.created_at)+')</span> <span style="color:#fca5a5">'+esc((latest.details||'').slice(0,120))+'</span>';
+    } else {
+      alertEl.style.display='none';
+      alertEl.innerHTML='';
+    }
+  }
   if(!list.length){ el.innerHTML='<div class="muted">No notifications</div>'; return; }
-  el.innerHTML=list.map(n=>`<div class="log-line"><span class="log-time">${esc(n.created_at)}</span> <b>[${esc(n.bot_id)}]</b> <span style="color:#fbbf24">${esc(n.type)}</span> ${esc(n.message)} <span style="color:#64748b">${esc(n.details||'')}</span></div>`).join('');
+  el.innerHTML=list.map(n=>{
+    const isNoSim = String(n.type||'').toLowerCase()==='nosimsregistered';
+    const bg = isNoSim ? 'background:#7f1d1d;border-left:3px solid #dc2626;padding-left:6px;' : '';
+    const typeColor = isNoSim ? '#fecaca' : '#fbbf24';
+    const priorityBadge = isNoSim ? ' <span class="badge badge-red">HIGH</span>' : '';
+    return `<div class="log-line" style="${bg}"><span class="log-time">${esc(n.created_at)}</span> <b>[${esc(n.bot_id)}]</b> <span style="color:${typeColor}">${esc(n.type)}</span>${priorityBadge} ${esc(n.message)} <span style="color:#64748b">${esc(n.details||'')}</span></div>`;
+  }).join('');
 }
+
 
 async function selectBot(id){
   selected=id;

@@ -62,9 +62,12 @@ CREATE TABLE IF NOT EXISTS `notifications` (
   `type` VARCHAR(64) NOT NULL COMMENT 'NoSimsRegistered|suspended|otp_failed|etc',
   `message` TEXT DEFAULT NULL,
   `details` TEXT DEFAULT NULL COMMENT 'JSON',
+  `priority` VARCHAR(16) DEFAULT NULL COMMENT 'high|normal|low',
   `is_read` TINYINT(1) DEFAULT 0,
   `created_at` DATETIME DEFAULT CURRENT_TIMESTAMP,
   INDEX (`bot_id`),
   INDEX (`type`),
-  INDEX (`created_at`)
+  INDEX (`created_at`),
+  INDEX (`priority`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+ALTER TABLE `notifications` ADD COLUMN IF NOT EXISTS `priority` VARCHAR(16) DEFAULT NULL;
