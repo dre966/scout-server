@@ -19,10 +19,15 @@ if ($databaseUrl) {
     }
 } else {
     $host = getenv('DB_HOST') ?: getenv('PGHOST') ?: 'localhost';
+    // Render dashboard truncates display - ensure full hostname: dpg-xxx-a.oregon-postgres.render.com
+    // If your screenshot shows "dpg-daoeabmgekts73bunkkg-a" without suffix, append it in dashboard.
+    if ($host && !str_contains($host, '.') && str_starts_with($host, 'dpg-')) {
+        $host .= '.oregon-postgres.render.com';
+    }
     $port = getenv('DB_PORT') ?: getenv('PGPORT') ?: '5432';
-    $db   = getenv('DB_NAME') ?: getenv('PGDATABASE') ?: 'scout_db';
-    $user = getenv('DB_USER') ?: getenv('PGUSER') ?: 'postgres';
-    $pass = getenv('DB_PASS') ?: getenv('PGPASSWORD') ?: '';
+    $db   = getenv('DB_DATABASE') ?: getenv('DB_NAME') ?: getenv('PGDATABASE') ?: 'scout_db';
+    $user = getenv('DB_USERNAME') ?: getenv('DB_USER') ?: getenv('PGUSER') ?: 'postgres';
+    $pass = getenv('DB_PASSWORD') ?: getenv('DB_PASS') ?: getenv('PGPASSWORD') ?: '';
     $sslmode = getenv('PGSSLMODE') ?: null;
 }
 
