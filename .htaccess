@@ -1,0 +1,26 @@
+# scout-server .htaccess (XAMPP Apache)
+Options -Indexes
+RewriteEngine On
+
+# CORS for api (also set in PHP, this is fallback)
+<IfModule mod_headers.c>
+  Header always set Access-Control-Allow-Origin "*"
+  Header always set Access-Control-Allow-Methods "GET, POST, OPTIONS"
+  Header always set Access-Control-Allow-Headers "Content-Type, X-Bot-Token"
+</IfModule>
+
+# Handle OPTIONS preflight
+RewriteCond %{REQUEST_METHOD} OPTIONS
+RewriteRule ^ - [R=204,L]
+
+# Deny direct access to config
+<FilesMatch "^(db\.php)$">
+  Require all denied
+</FilesMatch>
+
+# Hide errors from browser in production (log instead)
+php_flag display_errors off
+php_flag log_errors on
+
+# Optional: force JSON utf8
+AddDefaultCharset UTF-8
