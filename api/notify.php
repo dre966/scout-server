@@ -52,7 +52,9 @@ try {
     $tgToken = getenv('TELEGRAM_BOT_TOKEN') ?: '';
     $tgChat  = getenv('TELEGRAM_CHAT_ID') ?: '';
     $tgUrl   = getenv('TELEGRAM_WEBHOOK_URL') ?: '';
-    $sentTelegram = false;
+    $ntfyTopic = getenv('NTFY_TOPIC') ?: '';
+    $ntfyUrl = getenv('NTFY_URL') ?: ($ntfyTopic ? 'https://ntfy.sh/'.ltrim($ntfyTopic,'/') : '');
+    $sentTelegram = false; $sentNtfy = false;
 
     if ($tgToken && $tgChat) {
         $text = "[BOT {$bot_id}] {$type}: {$message}";
@@ -84,8 +86,24 @@ try {
         curl_close($ch);
         $sentTelegram = true;
     }
+    if ($ntfyUrl) {
+        $title = "[BOT {$bot_id}] {$type}";
+        $prio = ($priority==='high') ? '5' : '3';
+        $body = $message . ($detailsJson ? "\n".substr($detailsJson,0,600) : "");
+        $ch = curl_init($ntfyUrl);
+        curl_setopt_array($ch, [
+            CURLOPT_POST => true,
+            CURLOPT_POSTFIELDS => $body,
+            CURLOPT_HTTPHEADER => ['Title: '.$title,'Priority: '.$prio,'Tags: warning,scout'],
+            CURLOPT_RETURNTRANSFER => true,
+            CURLOPT_TIMEOUT => 5
+        ]);
+        $res = curl_exec($ch);
+        curl_close($ch);
+        $sentNtfy = $res !== false;
+    }
 
-    echo json_encode(['ok' => true, 'id' => (int)$nid, 'telegram_sent' => $sentTelegram]);
+    echo json_encode(['ok' => true, 'id' => (int)$nid, 'telegram_sent' => $sentTelegram, 'ntfy_sent' => $sentNtfy]);
 } catch (Exception $e) {
     http_response_code(500);
     echo json_encode(['ok' => false, 'error' => $e->getMessage()]);
