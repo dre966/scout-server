@@ -229,7 +229,9 @@ function esc(s){return String(s??'').replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt
 
 async function fetchBots(){
   try{
-    const r = await fetch('api/state.php', {headers: HEADERS});
+    const ctrl=new AbortController(); const t=setTimeout(()=>ctrl.abort(), 4000);
+    const r = await fetch('api/state.php', {headers: HEADERS, signal: ctrl.signal});
+    clearTimeout(t);
     const j = await r.json();
     if(j.ok){ bots=j.bots||[]; render(); renderGlobalNotifs(j.notifications||[]); document.getElementById('status').textContent=bots.length+' bots • '+new Date().toLocaleTimeString(); }
     else document.getElementById('status').textContent='error: '+(j.error||'unknown');
@@ -381,15 +383,17 @@ async function sendCommand(bot_id, cmd, args){
   }catch(e){ alert('Send failed: '+e.message); }
 }
 
-function pollNow(){ fetchBots(); fetchTokensTable(); }
+let fetchInFlight=false;
+async function fetchBotsSafe(){ if(fetchInFlight) return; fetchInFlight=true; try{ await fetchBots(); } finally { fetchInFlight=false; } }
+function pollNow(){ fetchBotsSafe(); fetchTokensTable(); }
 function resetTimer(){
   const v=parseInt(document.getElementById('autoPoll').value);
   if(timer) clearInterval(timer);
-  if(v>0) timer=setInterval(fetchBots, v);
+  if(v>0) timer=setInterval(fetchBotsSafe, v);
 }
 setInterval(()=>{ document.getElementById('clock').textContent=new Date().toLocaleTimeString(); },1000);
-fetchBots();
-timer=setInterval(fetchBots, 2000);
+fetchBotsSafe();
+timer=setInterval(fetchBotsSafe, 5000);
 
 // — tokens / SIMs —
 let tokenPollTimer = null;
