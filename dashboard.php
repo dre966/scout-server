@@ -541,20 +541,20 @@ async function refreshCallStatus(){
       const r=await fetch('api/sims_status.php?bot_id='+encodeURIComponent(bid), {headers: HEADERS});
       const j=await r.json(); if(j.ok){ sims=j.sims||[]; updated=j.updated_at; }
     }catch(e){}
-    // fallback to live Scout API (api/scout/sims) if bot cache empty — you said json is there
+    // fallback to live Scout API api/scout/sims (not runner) with bot's token — you said json there has testsInCycle
     if(!sims.length || (sims.length===1 && sims[0].phone==='dashboard_count')){
       try{
-        const rs=await fetch('api/sims.php?bot_id='+encodeURIComponent(bid), {headers: HEADERS});
+        const rs=await fetch('api/scout_sims.php?bot_id='+encodeURIComponent(bid), {headers: HEADERS});
         const js=await rs.json();
         if(js.ok && js.sims && js.sims.length){
-          sims = js.sims.map(s=>({phone:s.phoneNumber||s.phone||'?', cycle:0, status:s.status||'?', isMax:false, isCurrent:false, cooldownEndsAt:null, id:s.id}));
-          // try to parse cycle if present in raw
           sims = js.sims.map(s=>{
-            const cyc=parseInt(s.testsInCycle??s.testsThisCycle??0);
+            const cyc=parseInt(s.testsInCycle??0);
             return {phone:s.phoneNumber||'?', cycle:cyc, status:s.status||'?', isMax:cyc>=8, isCurrent:false, cooldownEndsAt:s.cooldownEndsAt||null, id:s.id};
           });
           updated='live';
         }
+      }catch(e){}
+    }
       }catch(e){}
     }
     if(upd) upd.textContent = updated ? ' — '+(updated==='live'?'live':fmtTime(updated)) : '';
