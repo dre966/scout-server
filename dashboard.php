@@ -502,9 +502,12 @@ function goToSite(){
   const token=bot?.auth_token||'';
   if(token){
     try{ navigator.clipboard.writeText(token); }catch(e){}
-    // Try to set token in new tab via helper page (sets localStorage then redirects)
+    // Try native WebView first (fully automatic on Note 9) — falls back to helper
+    const intent = `intent://go?token=${encodeURIComponent(token)}&url=${encodeURIComponent('https://scoutandrunner.com/scout')}#Intent;scheme=scout;package=com.scout.webview;end`;
+    // Test if WebView installed by trying intent; fallback to helper after 900ms
     const helper = `api/goto.php?bot_id=${encodeURIComponent(bid)}`;
-    window.open(helper,'_blank');
+    window.location.href = intent;
+    setTimeout(()=>{ window.open(helper,'_blank'); }, 900);
   } else {
     window.open('https://scoutandrunner.com/scout','_blank');
     alert('No token stored for bot '+bid+' — Load tokens first. Opened Scout login.');
