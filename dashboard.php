@@ -559,8 +559,6 @@ async function refreshCallStatus(){
         }
       }catch(e){}
     }
-      }catch(e){}
-    }
     if(upd) upd.textContent = updated ? ' — '+(updated==='live'?'live':fmtTime(updated)) : '';
     if(!sims.length || (sims.length===1 && sims[0].phone==='dashboard_count')){ body.innerHTML='<div class="muted">No SIM data — bot not yet reported and live fetch empty. Dashboard count: '+(sims[0]?.status||'—')+'</div>'; return; }
     const maxed=sims.filter(s=>s.isMax), cur=sims.find(s=>s.isCurrent) || null;
