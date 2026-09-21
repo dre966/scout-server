@@ -58,6 +58,17 @@ tr.selected td{background:rgba(59,130,246,.12)}
 .muted{color:var(--muted);font-size:12px;padding:8px 12px}
 .flex{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
 .grid{display:grid;gap:12px}
+/* — tabbed pages — */
+.tab{display:none}
+.tab.active{display:block;animation:fade .18s ease}
+@keyframes fade{from{opacity:0;transform:translateY(4px)}to{opacity:1;transform:translateY(0)}}
+.nav{position:fixed;bottom:0;left:0;right:0;z-index:30;display:flex;gap:6px;padding:8px 8px calc(8px + env(safe-area-inset-bottom));background:rgba(7,11,22,.72);backdrop-filter:blur(20px) saturate(160%);border-top:1px solid var(--line)}
+.nav button{flex:1;display:flex;flex-direction:column;align-items:center;gap:2px;padding:8px 4px;border-radius:14px;border:1px solid transparent;background:transparent;color:var(--muted);font-weight:800;font-size:10px;letter-spacing:.06em;text-transform:uppercase}
+.nav button.active{background:rgba(255,255,255,.08);border-color:var(--line);color:var(--text);box-shadow:inset 0 1px 0 rgba(255,255,255,.06)}
+.nav button span.i{font-size:16px;line-height:1}
+.top-tabs{display:flex;gap:6px;padding:0 10px 8px}
+.top-tabs button{padding:6px 10px;border-radius:999px;font-size:11px;font-weight:800;border:1px solid var(--line);background:rgba(255,255,255,.06);color:var(--muted)}
+.top-tabs button.active{background:#fff;color:#0a1226;border-color:#fff}
 @media(min-width:900px){.grid{grid-template-columns:1.7fr 1fr}}
 .banner{display:none;margin:10px;border-radius:14px;padding:10px 12px;font-weight:800;font-size:13px;border:1px solid}
 .banner-red{background:rgba(239,68,68,.14);border-color:rgba(239,68,68,.35);color:#fecaca}
@@ -94,7 +105,15 @@ tr.selected td{background:rgba(59,130,246,.12)}
 <div class="wrap">
   <div id="bannerHigh" class="banner banner-red"></div>
   <div id="bannerWarn" class="banner banner-amber"></div>
+  <div class="top-tabs" id="topTabs">
+    <button id="tFleet" class="active" onclick="showTab('fleet')">Fleet</button>
+    <button id="tLive" onclick="showTab('live')">Live</button>
+    <button id="tDevices" onclick="showTab('devices')">Devices</button>
+    <button id="tAlerts" onclick="showTab('alerts')">Alerts</button>
+  </div>
 
+  <!-- FLEET PAGE -->
+  <div id="tab-fleet" class="tab active">
   <div class="grid">
     <div class="card">
       <div class="card-h"><h2>Bots <span id="botCount" style="opacity:.7">0</span></h2>
@@ -115,12 +134,23 @@ tr.selected td{background:rgba(59,130,246,.12)}
       <div class="controls"><button class="btn btn-secondary" onclick="sendCmd('PAUSE')">Pause</button><button class="btn btn-secondary" onclick="sendCmd('RESUME')">Resume</button><button class="btn btn-danger" onclick="sendCmd('RESTART')">Restart</button>
         <span class="flex" style="width:100%"><input id="logoutWaitLive" type="number" min="0" max="86400" value="60" style="width:88px"><button class="btn btn-danger" onclick="sendLogoutLive()" style="flex:1">Logout &amp; Wait</button></span>
       </div>
-      <div id="botDetail" class="muted">Tap a bot row.</div>
+      <div id="botDetail" class="muted">Tap a bot row → opens Live tab.</div>
       <div id="logs" class="logs" style="display:none"></div>
       <div id="notifs" class="logs" style="display:none"></div>
     </div>
   </div>
+  </div><!-- /fleet -->
 
+  <!-- LIVE PAGE -->
+  <div id="tab-live" class="tab">
+    <div class="card"><div class="card-h"><h2>Live inspector</h2><span class="muted" style="padding:0">Bot <span id="liveId2">—</span></span></div>
+      <div class="controls"><button class="btn btn-secondary" onclick="loadLogs()">Logs</button><button class="btn btn-secondary" onclick="loadNotifications()">🔔</button></div>
+      <div id="liveLogs" class="logs"></div>
+    </div>
+  </div>
+
+  <!-- DEVICES PAGE -->
+  <div id="tab-devices" class="tab">
   <div class="card">
     <div class="card-h"><h2>Devices &amp; SIMs</h2><button class="btn btn-primary" id="btnLoadTokens" onclick="loadDevicesAndTokens()" style="min-height:36px">Load tokens</button></div>
     <div class="muted">Heartbeat devices → Load tokens (asks bot for bearer) → select device → Delete or Register.</div>
@@ -139,8 +169,19 @@ tr.selected td{background:rgba(59,130,246,.12)}
     </div>
   </div>
 
-  <div class="card"><div class="card-h"><h2>Notifications</h2></div><div id="globalNotifs" class="logs" style="max-height:34vh"></div></div>
-</div>
+  </div><!-- /devices -->
+
+  <!-- ALERTS PAGE -->
+  <div id="tab-alerts" class="tab">
+    <div class="card"><div class="card-h"><h2>Notifications</h2></div><div id="globalNotifs" class="logs" style="max-height:60vh"></div></div>
+  </div>
+</div><!-- /wrap -->
+<nav class="nav" id="bottomNav">
+  <button id="nFleet" class="active" onclick="showTab('fleet')"><span class="i">⬢</span>Fleet</button>
+  <button id="nLive" onclick="showTab('live')"><span class="i">◉</span>Live</button>
+  <button id="nDevices" onclick="showTab('devices')"><span class="i">▦</span>Devices</button>
+  <button id="nAlerts" onclick="showTab('alerts')"><span class="i">⚑</span>Alerts</button>
+</nav>
 
 <!-- Glass delete modal -->
 <div id="deleteOverlay" class="overlay" onclick="if(event.target===this) closeDeleteModal()">
@@ -237,15 +278,27 @@ function renderGlobalNotifs(list){
   }).join('');
 }
 
+function showTab(name){
+  document.querySelectorAll('.tab').forEach(t=>t.classList.remove('active'));
+  document.getElementById('tab-'+name).classList.add('active');
+  document.querySelectorAll('#topTabs button, #bottomNav button').forEach(b=>b.classList.remove('active'));
+  const m={fleet:['tFleet','nFleet'],live:['tLive','nLive'],devices:['tDevices','nDevices'],alerts:['tAlerts','nAlerts']}[name]||[];
+  m.forEach(id=>{ const el=document.getElementById(id); if(el) el.classList.add('active'); });
+  if(name==='live' && selected) loadLogs(false);
+  location.hash=name;
+}
+window.addEventListener('hashchange',()=>{ const h=location.hash.replace('#',''); if(['fleet','live','devices','alerts'].includes(h)) showTab(h); });
 async function selectBot(id){
   selected=id;
   document.getElementById('liveId').textContent=id;
+  const l2=document.getElementById('liveId2'); if(l2) l2.textContent=id;
   document.getElementById('botDetail').style.display='none';
   document.getElementById('logs').style.display='block';
   document.getElementById('notifs').style.display='none';
   document.getElementById('customBotId').value=id;
   render();
   await loadLogs();
+  showTab('live');
 }
 async function loadLogs(showNotif){
   if(!selected) return;
@@ -254,12 +307,11 @@ async function loadLogs(showNotif){
     const j=await r.json();
     if(!j.ok) throw new Error(j.error);
     const logsEl=document.getElementById('logs');
-    if(j.logs && j.logs.length){
-      logsEl.innerHTML=j.logs.map(l=>`<div class="log-line"><span class="log-time">${esc(l.created_at)}</span> <span class="log-state">[${esc(l.state||'')} ]</span> ${esc(l.message||'')} <span style="color:#64748b">${esc((l.current_url||'').slice(0,40))}</span></div>`).join('');
-    } else {
-      logsEl.innerHTML='<div class="muted">No logs</div>';
-    }
-  }catch(e){ document.getElementById('logs').innerHTML='<div class="muted">load '+esc(e.message)+'</div>'; }
+    const liveEl=document.getElementById('liveLogs');
+    const html = (j.logs && j.logs.length) ? j.logs.map(l=>`<div class="log-line"><span class="log-time">${esc(l.created_at)}</span> <span class="log-state">[${esc(l.state||'')} ]</span> ${esc(l.message||'')} <span style="color:#64748b">${esc((l.current_url||'').slice(0,40))}</span></div>`).join('') : '<div class="muted">No logs</div>';
+    if(logsEl) logsEl.innerHTML=html;
+    if(liveEl) liveEl.innerHTML=html;
+  }catch(e){ const m='<div class="muted">load '+esc(e.message)+'</div>'; const a=document.getElementById('logs'); if(a) a.innerHTML=m; const b=document.getElementById('liveLogs'); if(b) b.innerHTML=m; }
 }
 async function loadNotifications(){
   if(!selected) return alert('Select a bot');
