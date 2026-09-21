@@ -1,68 +1,53 @@
 <?php
-// api/goto.php?bot_id=20 — opens Scout & Runner with bot's bearer injected via helper page (new tab)
+// api/goto.php?bot_id=20 — injects stored bearer into scoutandrunner.com storage (cross-origin requires console/bookmarklet)
 header('Content-Type: text/html; charset=utf-8');
 $bot_id = $_GET['bot_id'] ?? $_GET['id'] ?? null;
-if ($bot_id === null || $bot_id === '') {
-    http_response_code(400);
-    echo 'bot_id required';
-    exit;
-}
+if ($bot_id === null || $bot_id === '') { http_response_code(400); echo 'bot_id required'; exit; }
 require_once __DIR__ . '/../config/db.php';
 $stmt = $pdo->prepare("SELECT auth_token, proxy_email FROM bots WHERE id = :id");
 $stmt->execute([':id' => (int)$bot_id]);
 $row = $stmt->fetch();
 $token = trim($row['auth_token'] ?? '');
-if (!$token || strlen($token) < 20) {
-    // No token - redirect to scout login with message
-    header('Location: https://scoutandrunner.com/scout');
-    exit;
-}
+if (!$token || strlen($token) < 20) { header('Location: https://scoutandrunner.com/scout'); exit; }
 if (stripos($token, 'Bearer ') === 0) $token = trim(substr($token, 7));
 $proxy = $row['proxy_email'] ?? '';
-$escToken = htmlspecialchars($token, ENT_QUOTES);
-$escProxy = htmlspecialchars($proxy, ENT_QUOTES);
 $botIdEsc = (int)$bot_id;
+// JS snippet that actually logs in (matches bot.py _extract_auth_token: cv-auth-storage {state:{token}})
+$jsInject = "localStorage.setItem('cv-auth-storage', JSON.stringify({state:{token:".json_encode($token)."}})); localStorage.setItem('auth', ".json_encode($token)."); sessionStorage.setItem('auth', ".json_encode($token)."); location.href='https://scoutandrunner.com/scout';";
+$bookmarklet = "javascript:(function(){".str_replace("'","\\'", $jsInject)."})()";
 ?>
-<!doctype html>
-<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <title>Go to Scout — Bot <?=$botIdEsc?></title>
-<style>body{margin:0;font-family:system-ui,sans-serif;background:#070b16;color:#e6edf7;display:flex;align-items:center;justify-content:center;min-height:100vh;padding:16px}
-.card{max-width:520px;width:100%;background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.1);border-radius:16px;padding:18px;backdrop-filter:blur(12px)}
-.btn{padding:10px 14px;border-radius:10px;border:none;font-weight:800;cursor:pointer}
+<style>body{margin:0;font-family:system-ui,sans-serif;background:#070b16;color:#e6edf7;display:flex;align-items:center;justify-content:center;min-height:100vh;padding:14px}
+.card{max-width:520px;width:100%;background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.1);border-radius:16px;padding:16px;backdrop-filter:blur(12px)}
+.btn{padding:9px 12px;border-radius:10px;border:none;font-weight:800;cursor:pointer;font-size:13px}
 .btn-p{background:#2563eb;color:#fff} .btn-s{background:rgba(255,255,255,.08);color:#e6edf7;border:1px solid rgba(255,255,255,.1)}
-.muted{color:#8ea0bd;font-size:12px}</style>
+.muted{color:#8ea0bd;font-size:11px;line-height:1.4}
+pre{white-space:break-all;word-break:break-all;background:rgba(0,0,0,.25);padding:8px;border-radius:10px;font-size:10px;max-height:110px;overflow:auto;border:1px solid rgba(255,255,255,.07)}
+a{color:#93c5fd}
+code{background:rgba(255,255,255,.08);padding:2px 6px;border-radius:6px;font-size:11px}</style>
 </head><body><div class="card">
-<h3 style="margin:0 0 6px">Bot <?=$botIdEsc?> — <?=$escProxy?></h3>
-<p class="muted" style="margin:0 0 10px">Token copied. This helper will inject it into <code>scoutandrunner.com</code> localStorage then open Scout. If popup blocked, click below.</p>
-<div style="display:flex;gap:8px;flex-wrap:wrap">
-<button class="btn btn-p" id="go">↗ Open Scout (with token)</button>
-<button class="btn btn-s" id="copy">Copy token</button>
+<h3 style="margin:0 0 4px">Bot <?=$botIdEsc?> — <?=htmlspecialchars($proxy,ENT_QUOTES)?></h3>
+<p class="muted" style="margin:0 0 10px">Cross-origin blocks direct <code>localStorage</code> from this domain. Use the inject snippet on <code>scoutandrunner.com</code> itself.</p>
+<div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:10px">
+<button class="btn btn-p" id="btnCopySnippet">Copy inject snippet</button>
+<button class="btn btn-s" id="btnOpen">Open Scout</button>
+<button class="btn btn-s" id="btnCopyToken">Copy token only</button>
 </div>
-<p class="muted" id="status" style="margin-top:10px"></p>
-<pre style="white-space:break-all;word-break:break-all;background:rgba(0,0,0,.2);padding:8px;border-radius:10px;font-size:10px;max-height:120px;overflow:auto"><?=$escToken?></pre>
+<div style="background:rgba(239,68,68,.1);border:1px solid rgba(239,68,68,.2);border-radius:10px;padding:8px" class="muted">
+<b style="color:#fecaca">Steps:</b> 1) Click <b>Copy inject snippet</b> → 2) <b>Open Scout</b> → 3) Press <b>F12 → Console</b> → <b>Paste (Ctrl+V) → Enter</b> → auto-redirects to <code>/scout</code> logged in.<br>
+Or drag this <a id="bm" href="<?=htmlspecialchars($bookmarklet,ENT_QUOTES)?>">Scout Login</a> to bookmarks bar, then click it while on Scout.
+</div>
+<p class="muted" id="status" style="margin-top:8px"></p>
+<pre id="snippet"><?=htmlspecialchars($jsInject,ENT_QUOTES)?></pre>
+<pre><?=htmlspecialchars($token,ENT_QUOTES)?></pre>
 </div>
 <script>
-const TOKEN = <?= json_encode($token) ?>;
-const BOT_ID = <?= json_encode($botIdEsc) ?>;
-async function injectAndGo(){
-  try{ await navigator.clipboard.writeText(TOKEN); }catch(e){}
-  document.getElementById('status').textContent='Opening scoutandrunner.com — token injected via window.opener fallback. If not logged in, paste token in console: localStorage.setItem("cv-auth-storage", JSON.stringify({state:{token:TOKEN}}))';
-  // Try to open Scout and postMessage token (Scout must listen) — fallback is manual copy
-  const w = window.open('https://scoutandrunner.com/scout','_blank');
-  if(!w){
-    document.getElementById('status').textContent='Popup blocked — allow popups then click Open Scout again. Token is on clipboard.';
-    return;
-  }
-  // Provide token via sessionStorage in helper's session then redirect helper itself after 1.5s so user lands on Scout
-  try{
-    // Store for bookmarklet-style manual injection: user can run in Scout console
-    sessionStorage.setItem('scout_goto_token', TOKEN);
-  }catch(e){}
-  setTimeout(()=>{ location.href='https://scoutandrunner.com/scout'; }, 900);
-}
-document.getElementById('go').onclick = injectAndGo;
-document.getElementById('copy').onclick = async ()=>{ try{ await navigator.clipboard.writeText(TOKEN); document.getElementById('status').textContent='Token copied — paste in Scout console if not auto-logged.'; }catch(e){} };
- // auto-go after 600ms so single click from dashboard feels instant
- setTimeout(injectAndGo, 600);
+const TOKEN = <?=json_encode($token)?>;
+const SNIPPET = document.getElementById('snippet').textContent;
+document.getElementById('btnCopySnippet').onclick = async ()=>{ try{ await navigator.clipboard.writeText(SNIPPET); document.getElementById('status').textContent='Snippet copied — open Scout, F12 Console, paste & Enter.'; }catch(e){ document.getElementById('status').textContent=SNIPPET; } };
+document.getElementById('btnCopyToken').onclick = async ()=>{ try{ await navigator.clipboard.writeText(TOKEN); document.getElementById('status').textContent='Token copied.'; }catch(e){} };
+document.getElementById('btnOpen').onclick = ()=> window.open('https://scoutandrunner.com/scout','_blank');
+document.getElementById('bm').onclick = (e)=>{ e.preventDefault(); alert('Drag this link to your bookmarks bar. Then on scoutandrunner.com click the bookmark to inject.'); };
 </script>
 </body></html>
