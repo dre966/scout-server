@@ -75,9 +75,10 @@ tr.selected{background:#1e3a5f}
     <div id="botsMuted" class="muted" style="display:none">No bots registered. Have bots POST to <code>api/register.php</code></div>
     <div class="controls">
       <input id="customBotId" placeholder="bot_id" type="number" style="width:90px">
-      <select id="cmdSelect"><option value="PAUSE">PAUSE</option><option value="RESUME">RESUME</option><option value="RESTART">RESTART</option><option value="STOP">STOP</option><option value="REFRESH">REFRESH</option></select>
+      <select id="cmdSelect" onchange="onCmdChange()"><option value="PAUSE">PAUSE</option><option value="RESUME">RESUME</option><option value="RESTART">RESTART</option><option value="STOP">STOP</option><option value="REFRESH">REFRESH</option><option value="LOGOUT">LOGOUT</option></select>
       <input id="cmdArgs" placeholder='args JSON (optional) e.g. {"delay":5}' style="flex:1;min-width:160px">
       <button class="btn btn-primary" onclick="sendCustomCommand()">Send</button>
+      <span class="muted" id="logoutHint" style="display:none">LOGOUT wait (s): <input id="logoutWait" type="number" min="0" max="86400" value="60" style="width:80px"> <button class="btn btn-danger" onclick="sendLogout()">Logout &amp; Wait</button></span>
     </div>
   </div>
 
@@ -93,6 +94,7 @@ tr.selected{background:#1e3a5f}
       <button class="btn btn-secondary" onclick="sendCmd('PAUSE')">Pause</button>
       <button class="btn btn-secondary" onclick="sendCmd('RESUME')">Resume</button>
       <button class="btn btn-danger" onclick="sendCmd('RESTART')">Restart</button>
+      <button class="btn btn-danger" onclick="document.getElementById('logoutWaitLive').focus()">Logout</button> <input id="logoutWaitLive" type="number" min="0" max="86400" value="60" style="width:80px" title="seconds to wait before re-login"><button class="btn btn-danger" onclick="sendLogoutLive()">Logout &amp; Wait</button>
     </div>
     <div id="botDetail" class="muted">Select a bot row to view logs/commands.</div>
     <div id="logs" class="logs" style="display:none"></div>
@@ -150,7 +152,11 @@ let timer = null;
 
 function fmtAge(heartbeat_at){
   if(!heartbeat_at) return '<span class="badge badge-gray">never</span>';
-  const t = new Date(heartbeat_at.replace(' ','T'));
+  // Postgres TIMESTAMPTZ may come as "2026-09-21 08:19:08.123+00" or "...+00:00" or without tz
+  let s = heartbeat_at.replace(' ','T');
+  if(!/[Z+\-]/.test(s.slice(10))) s += 'Z'; // assume UTC if no tz (Render = UTC, fixes 3min behind when parsed as local)
+  else if(/\+\d{2}$/.test(s)) s += ':00';
+  const t = new Date(s);
   const diff = Math.floor((Date.now()-t.getTime())/1000);
   if(isNaN(diff)) return heartbeat_at;
   let cls='badge-red', dot='dot-red', label=diff+'s ago';
@@ -269,16 +275,41 @@ async function loadNotifications(){
   }catch(e){ notifsEl.innerHTML='error '+esc(e.message); }
 }
 
+function onCmdChange(){
+  const v=document.getElementById('cmdSelect').value;
+  document.getElementById('logoutHint').style.display = (v==='LOGOUT') ? 'inline-flex' : 'none';
+  if(v==='LOGOUT'){
+    const w=document.getElementById('logoutWait');
+    const raw=document.getElementById('cmdArgs').value.trim();
+    if(!raw) document.getElementById('cmdArgs').value = JSON.stringify({wait: parseInt(w.value||60)});
+  }
+}
+async function sendLogout(){
+  const bot_id=document.getElementById('customBotId').value;
+  const wait=parseInt(document.getElementById('logoutWait').value||0);
+  if(!bot_id) return alert('bot_id required');
+  await sendCommand(bot_id, 'LOGOUT', {wait});
+}
+async function sendLogoutLive(){
+  if(!selected) return alert('Select a bot first');
+  const wait=parseInt(document.getElementById('logoutWaitLive').value||0);
+  await sendCommand(selected, 'LOGOUT', {wait});
+}
 async function sendCmd(cmd){
   if(!selected) return alert('Select a bot first');
   await sendCommand(selected, cmd, null);
 }
 async function sendCustomCommand(){
   const bot_id=document.getElementById('customBotId').value;
-  const cmd=document.getElementById('cmdSelect').value;
+  let cmd=document.getElementById('cmdSelect').value;
   const argsRaw=document.getElementById('cmdArgs').value.trim();
   let args=null;
   if(argsRaw){ try{ args=JSON.parse(argsRaw);}catch{ return alert('Invalid JSON args'); } }
+  // LOGOUT convenience: if hint visible and args empty, use wait input
+  if(cmd==='LOGOUT' && !args){
+    const w=document.getElementById('logoutWait');
+    args={wait: parseInt(w.value||0)};
+  }
   if(!bot_id) return alert('bot_id required');
   await sendCommand(bot_id, cmd, args);
 }
@@ -315,7 +346,10 @@ function maskToken(t){
 function fmtTime(s){
   if(!s) return '—';
   try{
-    const d = new Date(s.replace(' ','T'));
+    let t = s.replace(' ','T');
+    if(!/[Z+\-]/.test(t.slice(10))) t += 'Z';
+    else if(/\+\d{2}$/.test(t)) t += ':00';
+    const d = new Date(t);
     return d.toLocaleString();
   }catch{ return s; }
 }
