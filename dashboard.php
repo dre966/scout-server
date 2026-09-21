@@ -152,7 +152,7 @@ tr.selected td{background:rgba(59,130,246,.10)}
     <div id="tokenStatus" class="muted">No tokens yet.</div>
     <div class="controls" id="postTokenControls" style="display:none">
       <button class="btn btn-primary" onclick="goToSite()">↗ Go to site</button>
-      <button class="btn btn-danger" onclick="openDeleteModal()">Delete Account</button>
+      <button class="btn btn-danger" onclick="deleteAccountNow()">Delete Account</button>
       <button class="btn btn-primary" onclick="openSimRegisterFlow()">Register SIMs</button>
       <span class="muted" style="font-size:11px">Select checkbox first. Go to site opens Scout in new tab (token auto-copied).</span>
     </div>
@@ -510,32 +510,31 @@ function goToSite(){
     alert('No token stored for bot '+bid+' — Load tokens first. Opened Scout login.');
   }
 }
-// — delete account glass —
-function openDeleteModal(){
+async function deleteAccountNow(){
   const bid = getSelectedBotId();
   if(!bid) return alert('Select device checkbox first');
+  // no confirmation per request — direct delete
+  if(!confirm('Delete account for bot '+bid+'? This is irreversible.')) return;
+  const overlay=document.getElementById('deleteOverlay');
+  const resEl=document.getElementById('deleteResult');
   document.getElementById('deleteBotId').textContent=bid;
-  document.getElementById('deleteConfirm').value='';
-  document.getElementById('deleteResult').style.display='none';
-  document.getElementById('deleteResult').innerHTML='';
-  document.getElementById('deleteOverlay').style.display='flex';
-  setTimeout(()=>document.getElementById('deleteConfirm').focus(),80);
-}
-function closeDeleteModal(){ document.getElementById('deleteOverlay').style.display='none'; }
-async function confirmDeleteAccount(){
-  const bid = document.getElementById('deleteBotId').textContent;
-  const val = document.getElementById('deleteConfirm').value.trim();
-  if(val !== 'DELETE_MY_ACCOUNT') return alert('Type DELETE_MY_ACCOUNT exactly');
-  const btn=document.getElementById('btnDeleteConfirm'); const resEl=document.getElementById('deleteResult');
-  btn.disabled=true; btn.textContent='Deleting…'; resEl.style.display='block'; resEl.innerHTML='<span class="muted">Calling api/delete_account.php…</span>';
+  if(resEl){ resEl.style.display='block'; resEl.innerHTML='<span class="muted">Deleting…</span>'; }
+  if(overlay) overlay.style.display='flex';
   try{
     const r=await fetch('api/delete_account.php', {method:'POST', headers: HEADERS, body: JSON.stringify({bot_id: parseInt(bid), confirmation:'DELETE_MY_ACCOUNT'})});
     const t=await r.text(); let j; try{ j=JSON.parse(t);}catch{ j={raw:t, http:r.status} }
-    if(r.ok && (j.ok || r.status===200)){ resEl.innerHTML=`<span style="color:var(--ok)">✓ Account deleted (http ${r.status})</span><br><span style="color:var(--muted)">${esc(t.slice(0,400))}</span>`; setTimeout(()=>{ closeDeleteModal(); fetchBots(); },1200); }
-    else { resEl.innerHTML=`<span style="color:var(--danger)">✗ Failed http ${r.status}</span><br><span style="color:var(--muted)">${esc(t.slice(0,600))}</span>`; }
-  }catch(e){ resEl.innerHTML=`<span style="color:var(--danger)">Error: ${esc(e.message)}</span>`; }
-  finally{ btn.disabled=false; btn.textContent='Delete'; }
+    if(r.ok && (j.ok || r.status===200)){
+      if(resEl) resEl.innerHTML=`<span style="color:var(--ok)">✓ Deleted (http ${r.status}) — bot → landing</span>`;
+      setTimeout(()=>{ const o=document.getElementById('deleteOverlay'); if(o) o.style.display='none'; fetchBots(); },900);
+    } else {
+      if(resEl) resEl.innerHTML=`<span style="color:var(--danger)">✗ Failed http ${r.status}</span><br><span style="color:var(--muted)">${esc(t.slice(0,600))}</span>`;
+    }
+  }catch(e){ if(resEl) resEl.innerHTML=`<span style="color:var(--danger)">Error: ${esc(e.message)}</span>`; }
 }
+// keep modal helpers for goto flow (delete now uses deleteAccountNow)
+function openDeleteModal(){ return deleteAccountNow(); }
+function closeDeleteModal(){ const o=document.getElementById('deleteOverlay'); if(o) o.style.display='none'; }
+async function confirmDeleteAccount(){ return deleteAccountNow(); }
 </script>
 </body>
 </html>

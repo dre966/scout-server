@@ -82,6 +82,13 @@ try {
         // notify high-priority so banner shows
         $pdo->prepare("INSERT INTO notifications (bot_id, type, message, details, priority, created_at) VALUES (:bid, 'AccountDeleted', :msg, :det, 'high', NOW())")
             ->execute([':bid'=>(int)$bot_id, ':msg'=>'Account deleted for bot '.(int)$bot_id.' ('.($row['proxy_email']??'').')', ':det'=>substr($resp?:'',0,500)]);
+        // make bot go to landing page after delete (no confirmation flow)
+        try {
+            $pdo->prepare("INSERT INTO commands (bot_id, cmd, args, status, created_at) VALUES (:bid, 'LOGOUT', :args, 'pending', NOW())")
+                ->execute([':bid'=>(int)$bot_id, ':args'=>json_encode(['wait'=>0])]);
+            $pdo->prepare("INSERT INTO bot_logs (bot_id, message, level) VALUES (:bid, :msg, 'info')")
+                ->execute([':bid'=>(int)$bot_id, ':msg'=>'delete_account -> queued LOGOUT to landing']);
+        } catch (Exception $e) {}
     }
 
     http_response_code($http);
