@@ -260,7 +260,7 @@ function renderGlobalNotifs(list){
   const high = list.filter(n=> ['nosimsregistered','nonumberstotest','accountdeleted'].includes(String(n.type||'').toLowerCase()));
   const warn = list.filter(n=> !high.includes(n));
   if(bHigh){
-    if(high.length){ bHigh.style.display='block'; bHigh.innerHTML='🚨 '+high.map(h=>`${esc(h.type)} — Bot ${esc(h.bot_id)}: ${esc(h.message)} <span style="opacity:.7">(${esc(h.created_at)})</span>`).join(' • '); }
+    if(high.length){ bHigh.style.display='block'; bHigh.innerHTML='🚨 '+high.map(h=>`${esc(h.type)} — Bot ${esc(h.bot_id)}: ${esc(h.message)} <span style="opacity:.7">(${fmtLogAge(h.created_at)})</span>`).join(' • '); }
     else { bHigh.style.display='none'; bHigh.innerHTML=''; }
   }
   if(bWarn){
@@ -274,7 +274,7 @@ function renderGlobalNotifs(list){
     const bg = isHigh ? 'background:rgba(239,68,68,.10);border-left:3px solid #ef4444;padding-left:6px;' : '';
     const col = isHigh ? '#fecaca' : '#fbbf24';
     const badge = isHigh ? ' <span class="badge badge-red">HIGH</span>' : '';
-    return `<div class="log-line" style="${bg}"><span class="log-time">${esc(n.created_at)}</span> <b>[${esc(n.bot_id)}]</b> <span style="color:${col}">${esc(n.type)}</span>${badge} ${esc(n.message)} <span style="color:#64748b">${esc((n.details||'').slice(0,180))}</span></div>`;
+    return `<div class="log-line" style="${bg}"><span class="log-time" title="${esc(n.created_at)}">${esc(fmtLogAge(n.created_at))}</span> <b>[${esc(n.bot_id)}]</b> <span style="color:${col}">${esc(n.type)}</span>${badge} ${esc(n.message)} <span style="color:#64748b">${esc((n.details||'').slice(0,180))}</span></div>`;
   }).join('');
 }
 
@@ -300,6 +300,15 @@ async function selectBot(id){
   await loadLogs();
   showTab('live');
 }
+function fmtLogAge(s){
+  if(!s) return '';
+  let t=s.replace(' ','T'); if(!/[Z+\-]/.test(t.slice(10))) t+='Z'; else if(/\+\d{2}$/.test(t)) t+=':00';
+  const d=new Date(t); const diff=Math.floor((Date.now()-d.getTime())/1000);
+  if(isNaN(diff)) return esc(s);
+  if(diff<60) return diff+'s ago';
+  if(diff<3600) return Math.floor(diff/60)+'m ago';
+  return Math.floor(diff/3600)+'h ago';
+}
 async function loadLogs(showNotif){
   if(!selected) return;
   try{
@@ -308,7 +317,11 @@ async function loadLogs(showNotif){
     if(!j.ok) throw new Error(j.error);
     const logsEl=document.getElementById('logs');
     const liveEl=document.getElementById('liveLogs');
-    const html = (j.logs && j.logs.length) ? j.logs.map(l=>`<div class="log-line"><span class="log-time">${esc(l.created_at)}</span> <span class="log-state">[${esc(l.state||'')} ]</span> ${esc(l.message||'')} <span style="color:#64748b">${esc((l.current_url||'').slice(0,40))}</span></div>`).join('') : '<div class="muted">No logs</div>';
+    const html = (j.logs && j.logs.length) ? j.logs.map(l=>{
+      let t=l.created_at.replace(' ','T'); if(!/[Z+\-]/.test(t.slice(10))) t+='Z'; else if(/\+\d{2}$/.test(t)) t+=':00';
+      const age=fmtLogAge(l.created_at);
+      return `<div class="log-line"><span class="log-time" title="${esc(l.created_at)}">${esc(age)}</span> <span class="log-state">[${esc(l.state||'')} ]</span> ${esc(l.message||'')} <span style="color:#64748b">${esc((l.current_url||'').slice(0,40))}</span></div>`;
+    }).join('') : '<div class="muted">No logs</div>';
     if(logsEl) logsEl.innerHTML=html;
     if(liveEl) liveEl.innerHTML=html;
   }catch(e){ const m='<div class="muted">load '+esc(e.message)+'</div>'; const a=document.getElementById('logs'); if(a) a.innerHTML=m; const b=document.getElementById('liveLogs'); if(b) b.innerHTML=m; }
