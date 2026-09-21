@@ -21,19 +21,17 @@ try {
     if (!$row||empty($row['auth_token'])) { http_response_code(404); echo json_encode(['ok'=>false,'error'=>'no auth_token for bot_id '.(int)$bot_id]); exit; }
     $token=trim($row['auth_token']); if(stripos($token,'Bearer ')===0) $token=trim(substr($token,7));
 
-    // Exact fetch you specified: first check role via api/auth/me, if scout then hit api/scout/sims
+    // Exact fetches you specified
     $authHeaders = [
         'accept: application/json, text/plain, */*',
         'accept-language: en-US,en;q=0.9',
         'authorization: Bearer '.$token,
-        'if-none-match: W/"c15e-miiOcAirEkGn21TZs2tjqgK0AkA"',
-        'origin: https://scoutandrunner.com',
-        'referer: https://scoutandrunner.com/scout/sims',
     ];
     $ch=curl_init('https://scoutandrunner.com/api/auth/me');
     curl_setopt_array($ch,[
         CURLOPT_RETURNTRANSFER=>true, CURLOPT_TIMEOUT=>10,
         CURLOPT_HTTPHEADER=>$authHeaders,
+        CURLOPT_REFERER=>'https://scoutandrunner.com/scout',
         CURLOPT_SSL_VERIFYPEER=>true,
     ]);
     $resp=curl_exec($ch); $http=curl_getinfo($ch,CURLINFO_HTTP_CODE); $err=curl_error($ch); curl_close($ch);
@@ -54,7 +52,7 @@ try {
         sleep(1);
         // re-check role
         $ch=curl_init('https://scoutandrunner.com/api/auth/me');
-        curl_setopt_array($ch,[CURLOPT_RETURNTRANSFER=>true, CURLOPT_TIMEOUT=>10, CURLOPT_HTTPHEADER=>$authHeaders, CURLOPT_SSL_VERIFYPEER=>true]);
+        curl_setopt_array($ch,[CURLOPT_RETURNTRANSFER=>true, CURLOPT_TIMEOUT=>10, CURLOPT_HTTPHEADER=>$authHeaders, CURLOPT_REFERER=>'https://scoutandrunner.com/scout', CURLOPT_SSL_VERIFYPEER=>true]);
         $resp=curl_exec($ch); $http=curl_getinfo($ch,CURLINFO_HTTP_CODE); curl_close($ch);
         $me=json_decode($resp,true);
         $role=$me['user']['role'] ?? $me['role'] ?? null;
