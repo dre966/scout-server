@@ -88,7 +88,7 @@ try {
     }
     if ($ntfyUrl) {
         $title = "[BOT {$bot_id}] {$type}";
-        $prio = ($priority==='high') ? '5' : '3';
+        $prio = '5'; // always high for phone (max sound)
         $body = $message . ($detailsJson ? "\n".substr($detailsJson,0,600) : "");
         $ch = curl_init($ntfyUrl);
         curl_setopt_array($ch, [
