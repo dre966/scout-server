@@ -253,7 +253,11 @@ function render(){
       <td><span class="badge ${b.state==='running'?'badge-green':b.state==='paused'?'badge-yellow':'badge-gray'}" style="font-size:10px;padding:1px 6px">${esc((b.state||'—').slice(0,14))}</span></td>
       <td title="${esc(b.proxy_email)}">${esc((b.proxy_email||'').split('@')[0].slice(0,16))}</td>
       <td>${fmtAge(b.heartbeat_at)}</td>
-      <td><button class="btn btn-secondary" onclick="event.stopPropagation(); selectBot(${b.id}); sendCmd('RESTART')" style="min-height:28px;padding:4px 8px;font-size:10px">↻</button></td>
+      <td style="display:flex;gap:4px">
+        <button class="btn btn-secondary" onclick="event.stopPropagation(); sendWake(${b.id})" style="min-height:28px;padding:4px 6px;font-size:10px" title="Wake from LOGOUT/SLEEP">Wake</button>
+        <button class="btn btn-secondary" onclick="event.stopPropagation(); sendSleep(${b.id})" style="min-height:28px;padding:4px 6px;font-size:10px" title="Sleep">Sleep</button>
+        <button class="btn btn-secondary" onclick="event.stopPropagation(); selectBot(${b.id}); sendCmd('RESTART')" style="min-height:28px;padding:4px 8px;font-size:10px">↻</button>
+      </td>
     </tr>
   `).join('');
 }
@@ -400,6 +404,13 @@ function resetTimer(){
   const v=parseInt(document.getElementById('autoPoll').value);
   if(timer) clearInterval(timer);
   if(v>0) timer=setInterval(fetchBotsSafe, v);
+}
+async function sendWake(bot_id){ const id=bot_id??selected; if(id===null||id===undefined||id==='') return alert('Select bot'); await sendCommand(id,'WAKE',{}); }
+async function sendSleep(bot_id){
+  const id=bot_id??selected; if(id===null||id===undefined||id==='') return alert('Select bot');
+  const v=prompt('Sleep seconds for bot '+id+' (0-86400):','60'); if(v===null) return;
+  const wait=parseInt(v||0); if(isNaN(wait)||wait<0) return alert('Invalid');
+  await sendCommand(id,'SLEEP',{wait});
 }
 setInterval(()=>{ document.getElementById('clock').textContent=new Date().toLocaleTimeString(); },1000);
 fetchBotsSafe();
