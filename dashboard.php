@@ -5,142 +5,155 @@ $BOT_TOKEN = getenv('BOT_TOKEN') ?: 'scout-secret';
 <html lang="en">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Scout Bot Dashboard</title>
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Scout Fleet — Note 9 Glass</title>
 <style>
+/* — Minimalist glass — optimized for Galaxy Note 9 (360×740 CSS, thumb reach) — */
 *{box-sizing:border-box;margin:0;padding:0}
-body{font-family:system-ui,-apple-system,Segoe UI,Roboto,Arial,sans-serif;background:#0f172a;color:#e2e8f0;line-height:1.5}
-header{background:#1e293b;padding:12px 16px;position:sticky;top:0;z-index:10;display:flex;flex-wrap:wrap;align-items:center;gap:12px;border-bottom:1px solid #334155}
-header h1{font-size:18px;flex:1;min-width:180px}
-header .meta{font-size:12px;color:#94a3b8}
-.grid{display:grid;grid-template-columns:1fr;gap:12px;padding:12px}
-@media(min-width:900px){.grid{grid-template-columns:1.7fr 1fr}}
-.card{background:#1e293b;border:1px solid #334155;border-radius:10px;overflow:hidden}
-.card h2{font-size:14px;padding:10px 12px;border-bottom:1px solid #334155;background:#0f172a;display:flex;justify-content:space-between;align-items:center}
-.card h2 button{font-size:12px}
-table{width:100%;border-collapse:collapse;font-size:13px}
-th,td{padding:8px 10px;text-align:left;border-bottom:1px solid #334155;white-space:nowrap}
-th{background:#0f172a;color:#94a3b8;font-weight:600;position:sticky;top:0}
-tr:hover{background:#0f2847}
-tr.selected{background:#1e3a5f}
-.badge{padding:2px 7px;border-radius:999px;font-size:11px;font-weight:700;display:inline-block}
-.badge-green{background:#065f46;color:#6ee7b7}
-.badge-yellow{background:#7c5800;color:#fde68a}
-.badge-red{background:#7f1d1d;color:#fecaca}
-.badge-gray{background:#334155;color:#cbd5e1}
-.dot{width:9px;height:9px;border-radius:50%;display:inline-block;margin-right:6px;vertical-align:middle}
-.dot-green{background:#22c55e;box-shadow:0 0 6px #22c55e}
-.dot-yellow{background:#eab308;box-shadow:0 0 6px #eab308}
-.dot-red{background:#ef4444;box-shadow:0 0 6px #ef4444}
-.controls{display:flex;flex-wrap:wrap;gap:6px;padding:10px}
-.controls input,.controls select{padding:7px 8px;border-radius:8px;border:1px solid #334155;background:#0f172a;color:#e2e8f0;font-size:13px}
-.btn{padding:7px 12px;border:none;border-radius:8px;cursor:pointer;font-weight:700;font-size:12px}
-.btn-primary{background:#2563eb;color:#fff}
-.btn-secondary{background:#334155;color:#e2e8f0}
-.btn-danger{background:#dc2626;color:#fff}
+:root{--glass:rgba(255,255,255,.06);--glass-2:rgba(255,255,255,.10);--line:rgba(255,255,255,.10);--text:#e6edf7;--muted:#8a9bb4;--accent:#3b82f6;--danger:#ef4444;--ok:#22c55e;--warn:#eab308;--r:18px;--blur:22px}
+html,body{height:100%}
+body{font-family:Inter,system-ui,-apple-system,Segoe UI,Roboto,Arial,sans-serif;background:
+  radial-gradient(1100px 700px at 20% -10%, rgba(59,130,246,.22), transparent 60%),
+  radial-gradient(900px 600px at 90% 0%, rgba(139,92,246,.18), transparent 60%),
+  linear-gradient(180deg,#070b16 0%,#0a1226 55%,#070b16 100%);color:var(--text);line-height:1.45;-webkit-font-smoothing:antialiased}
+a{color:inherit}
+header{position:sticky;top:0;z-index:20;display:flex;align-items:center;gap:10px;padding:10px 12px;
+  background:rgba(10,18,38,.55);backdrop-filter:blur(var(--blur)) saturate(160%);-webkit-backdrop-filter:blur(var(--blur)) saturate(160%);
+  border-bottom:1px solid var(--line)}
+header h1{font-size:15px;font-weight:800;letter-spacing:.02em;flex:1;min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.meta{font-size:11px;color:var(--muted);white-space:nowrap}
+.wrap{max-width:1100px;margin:0 auto;padding:10px 10px 88px}
+.card{background:var(--glass);backdrop-filter:blur(var(--blur)) saturate(150%);-webkit-backdrop-filter:blur(var(--blur)) saturate(150%);
+  border:1px solid var(--line);border-radius:var(--r);overflow:hidden;box-shadow:0 10px 40px rgba(0,0,0,.35), inset 0 1px 0 rgba(255,255,255,.06);margin-bottom:12px}
+.card-h{display:flex;align-items:center;justify-content:space-between;gap:8px;padding:11px 12px;border-bottom:1px solid var(--line);background:rgba(255,255,255,.03)}
+.card-h h2{font-size:12px;font-weight:800;letter-spacing:.06em;text-transform:uppercase;color:#cbd5e1}
+.badge{padding:2px 8px;border-radius:999px;font-size:11px;font-weight:800;display:inline-block}
+.badge-green{background:rgba(34,197,94,.15);color:#86efac;border:1px solid rgba(34,197,94,.3)}
+.badge-yellow{background:rgba(234,179,8,.14);color:#fde68a;border:1px solid rgba(234,179,8,.3)}
+.badge-red{background:rgba(239,68,68,.14);color:#fecaca;border:1px solid rgba(239,68,68,.3)}
+.badge-gray{background:rgba(255,255,255,.06);color:#cbd5e1;border:1px solid var(--line)}
+.dot{width:8px;height:8px;border-radius:50%;display:inline-block;margin-right:6px;vertical-align:middle}
+.dot-green{background:var(--ok);box-shadow:0 0 8px rgba(34,197,94,.7)}
+.dot-yellow{background:var(--warn);box-shadow:0 0 8px rgba(234,179,8,.7)}
+.dot-red{background:var(--danger);box-shadow:0 0 8px rgba(239,68,68,.7)}
+.controls{display:flex;flex-wrap:wrap;gap:8px;padding:10px}
+.controls input,.controls select{padding:10px 10px;border-radius:12px;border:1px solid var(--line);background:rgba(255,255,255,.06);color:var(--text);font-size:13px;min-height:44px;outline:none}
+.controls input:focus,.controls select:focus{border-color:rgba(59,130,246,.5);background:rgba(255,255,255,.09)}
+.btn{padding:10px 14px;border:none;border-radius:12px;cursor:pointer;font-weight:800;font-size:12px;letter-spacing:.02em;min-height:44px;transition:.15s}
+.btn:active{transform:scale(.98)}
+.btn-primary{background:linear-gradient(180deg,#3b82f6,#2563eb);color:#fff;box-shadow:0 6px 18px rgba(37,99,235,.35)}
+.btn-secondary{background:rgba(255,255,255,.08);color:var(--text);border:1px solid var(--line);backdrop-filter:blur(8px)}
+.btn-danger{background:rgba(239,68,68,.16);color:#fecaca;border:1px solid rgba(239,68,68,.3)}
 .btn:disabled{opacity:.5;cursor:not-allowed}
-.logs{max-height:55vh;overflow:auto;padding:8px;font-family:ui-monospace,Consolas,monospace;font-size:12px;background:#0b1220}
-.log-line{padding:3px 0;border-bottom:1px solid #1e293b;word-break:break-all}
-.log-time{color:#64748b}
-.log-state{color:#38bdf8}
-.muted{color:#64748b;font-size:12px;padding:8px}
+.table-wrap{overflow:auto;-webkit-overflow-scrolling:touch}
+table{width:100%;border-collapse:separate;border-spacing:0;font-size:12px;min-width:680px}
+th,td{padding:9px 10px;text-align:left;border-bottom:1px solid var(--line);white-space:nowrap}
+th{position:sticky;top:0;background:rgba(10,18,38,.75);backdrop-filter:blur(10px);color:var(--muted);font-weight:700;letter-spacing:.04em;text-transform:uppercase;font-size:10px}
+tr:hover td{background:rgba(255,255,255,.03)}
+tr.selected td{background:rgba(59,130,246,.12)}
+.logs{max-height:42vh;overflow:auto;padding:8px;font-family:ui-monospace,Consolas,monospace;font-size:11px;background:rgba(0,0,0,.22);border-top:1px solid var(--line)}
+.log-line{padding:5px 0;border-bottom:1px solid rgba(255,255,255,.06);word-break:break-all}
+.log-time{color:#7a8aa6}
+.log-state{color:#7dd3fc}
+.muted{color:var(--muted);font-size:12px;padding:8px 12px}
 .flex{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
-@media(max-width:600px){table{font-size:12px} th,td{padding:6px 7px} header h1{font-size:16px}}
+.grid{display:grid;gap:12px}
+@media(min-width:900px){.grid{grid-template-columns:1.7fr 1fr}}
+.banner{display:none;margin:10px;border-radius:14px;padding:10px 12px;font-weight:800;font-size:13px;border:1px solid}
+.banner-red{background:rgba(239,68,68,.14);border-color:rgba(239,68,68,.35);color:#fecaca}
+.banner-amber{background:rgba(234,179,8,.12);border-color:rgba(234,179,8,.3);color:#fde68a}
+/* Glass modal */
+.overlay{position:fixed;inset:0;background:rgba(3,7,18,.55);backdrop-filter:blur(10px);display:none;align-items:center;justify-content:center;z-index:50;padding:16px}
+.sheet{width:min(420px,96vw);background:rgba(18,27,52,.82);backdrop-filter:blur(var(--blur)) saturate(150%);border:1px solid var(--line);border-radius:20px;overflow:hidden;box-shadow:0 20px 60px rgba(0,0,0,.5)}
+.sheet-h{padding:14px 16px;border-bottom:1px solid var(--line);font-weight:800}
+.sheet-b{padding:14px 16px;display:grid;gap:10px}
+.sheet-b input{width:100%}
+.sheet-f{display:flex;gap:8px;justify-content:flex-end;padding:12px 16px;border-top:1px solid var(--line);background:rgba(255,255,255,.02)}
+/* Note 9 thumb bar */
+.tabbar{display:none}
+@media(max-width:700px){
+  header h1{font-size:14px}
+  .controls input,.controls select{flex:1 1 100%}
+  table{min-width:620px}
+}
+@media(max-width:420px){
+  /* Galaxy Note 9 narrow: stack, larger touch */
+  .wrap{padding:8px 8px 90px}
+  .card-h{padding:10px}
+  .btn{flex:1 1 auto}
+}
 </style>
 </head>
 <body>
-<div id="noSimsAlert" style="display:none;background:#7f1d1d;color:#fecaca;padding:10px 16px;border:1px solid #dc2626;margin:12px 12px 0 12px;border-radius:8px;font-weight:700"></div>
 <header>
-  <h1>🛰️ Scout Fleet Dashboard</h1>
-  <span class="meta" id="status">polling…</span>
+  <h1>⬢ Scout Fleet</h1>
+  <span class="meta" id="status">—</span>
   <span class="meta" id="clock"></span>
-  <button class="btn btn-secondary" onclick="pollNow()">Refresh</button>
+  <button class="btn btn-secondary" onclick="pollNow()" style="min-height:36px;padding:8px 12px">↻</button>
 </header>
+<div class="wrap">
+  <div id="bannerHigh" class="banner banner-red"></div>
+  <div id="bannerWarn" class="banner banner-amber"></div>
 
-<div class="grid">
-  <div class="card">
-    <h2>
-      <span>Bots (<span id="botCount">0</span>)</span>
-      <span class="flex">
-        <input id="filter" placeholder="filter bot_id/email" oninput="render()" style="width:160px">
-        <select id="autoPoll" onchange="resetTimer()"><option value="2000" selected>2s poll</option><option value="5000">5s</option><option value="0">off</option></select>
-      </span>
-    </h2>
-    <div style="overflow:auto;max-height:65vh">
-      <table>
-        <thead><tr><th>#</th><th>State</th><th>Sims</th><th>Proxy Email</th><th>Poll Inbox</th><th>Heartbeat</th><th>URL</th><th>Action</th></tr></thead>
-        <tbody id="tbody"></tbody>
-      </table>
+  <div class="grid">
+    <div class="card">
+      <div class="card-h"><h2>Bots <span id="botCount" style="opacity:.7">0</span></h2>
+        <span class="flex"><input id="filter" placeholder="filter" oninput="render()" style="width:140px;min-height:36px"><select id="autoPoll" onchange="resetTimer()" style="min-height:36px"><option value="2000" selected>2s</option><option value="5000">5s</option><option value="0">off</option></select></span>
+      </div>
+      <div class="table-wrap" style="max-height:42vh"><table><thead><tr><th>#</th><th>State</th><th>Sims</th><th>Proxy</th><th>Heartbeat</th><th>URL</th><th></th></tr></thead><tbody id="tbody"></tbody></table></div>
+      <div id="botsMuted" class="muted" style="display:none">No bots. Bots POST to <code>api/register.php</code></div>
+      <div class="controls">
+        <input id="customBotId" placeholder="bot_id" type="number" style="width:90px">
+        <select id="cmdSelect" onchange="onCmdChange()"><option value="PAUSE">PAUSE</option><option value="RESUME">RESUME</option><option value="RESTART">RESTART</option><option value="STOP">STOP</option><option value="REFRESH">REFRESH</option><option value="LOGOUT">LOGOUT</option></select>
+        <input id="cmdArgs" placeholder='args JSON e.g. {"wait":60}' style="flex:1;min-width:140px">
+        <button class="btn btn-primary" onclick="sendCustomCommand()">Send</button>
+        <span id="logoutHint" class="flex" style="display:none;width:100%"><input id="logoutWait" type="number" min="0" max="86400" value="60" style="width:96px"> <button class="btn btn-danger" onclick="sendLogout()">Logout &amp; Wait</button></span>
+      </div>
     </div>
-    <div id="botsMuted" class="muted" style="display:none">No bots registered. Have bots POST to <code>api/register.php</code></div>
-    <div class="controls">
-      <input id="customBotId" placeholder="bot_id" type="number" style="width:90px">
-      <select id="cmdSelect" onchange="onCmdChange()"><option value="PAUSE">PAUSE</option><option value="RESUME">RESUME</option><option value="RESTART">RESTART</option><option value="STOP">STOP</option><option value="REFRESH">REFRESH</option><option value="LOGOUT">LOGOUT</option></select>
-      <input id="cmdArgs" placeholder='args JSON (optional) e.g. {"delay":5}' style="flex:1;min-width:160px">
-      <button class="btn btn-primary" onclick="sendCustomCommand()">Send</button>
-      <span class="muted" id="logoutHint" style="display:none">LOGOUT wait (s): <input id="logoutWait" type="number" min="0" max="86400" value="60" style="width:80px"> <button class="btn btn-danger" onclick="sendLogout()">Logout &amp; Wait</button></span>
+    <div class="card">
+      <div class="card-h"><h2>Live <span id="liveId">—</span></h2><span class="flex"><button class="btn btn-secondary" onclick="loadLogs()">Logs</button><button class="btn btn-secondary" onclick="loadNotifications()">🔔</button></span></div>
+      <div class="controls"><button class="btn btn-secondary" onclick="sendCmd('PAUSE')">Pause</button><button class="btn btn-secondary" onclick="sendCmd('RESUME')">Resume</button><button class="btn btn-danger" onclick="sendCmd('RESTART')">Restart</button>
+        <span class="flex" style="width:100%"><input id="logoutWaitLive" type="number" min="0" max="86400" value="60" style="width:88px"><button class="btn btn-danger" onclick="sendLogoutLive()" style="flex:1">Logout &amp; Wait</button></span>
+      </div>
+      <div id="botDetail" class="muted">Tap a bot row.</div>
+      <div id="logs" class="logs" style="display:none"></div>
+      <div id="notifs" class="logs" style="display:none"></div>
     </div>
   </div>
 
   <div class="card">
-    <h2>
-      <span>Live: Bot <span id="liveId">—</span></span>
-      <span class="flex">
-        <button class="btn btn-secondary" onclick="loadLogs()">Logs</button>
-        <button class="btn btn-secondary" onclick="loadNotifications()">🔔 Notes</button>
-      </span>
-    </h2>
-    <div class="controls">
-      <button class="btn btn-secondary" onclick="sendCmd('PAUSE')">Pause</button>
-      <button class="btn btn-secondary" onclick="sendCmd('RESUME')">Resume</button>
-      <button class="btn btn-danger" onclick="sendCmd('RESTART')">Restart</button>
-      <button class="btn btn-danger" onclick="document.getElementById('logoutWaitLive').focus()">Logout</button> <input id="logoutWaitLive" type="number" min="0" max="86400" value="60" style="width:80px" title="seconds to wait before re-login"><button class="btn btn-danger" onclick="sendLogoutLive()">Logout &amp; Wait</button>
+    <div class="card-h"><h2>Devices &amp; SIMs</h2><button class="btn btn-primary" id="btnLoadTokens" onclick="loadDevicesAndTokens()" style="min-height:36px">Load tokens</button></div>
+    <div class="muted">Heartbeat devices → Load tokens (asks bot for bearer) → select device → Delete or Register.</div>
+    <div class="table-wrap" style="max-height:32vh"><table><thead><tr><th><input type="checkbox" id="chkAll" onchange="toggleAll(this.checked)"></th><th>Bot</th><th>Proxy</th><th>Token</th><th>State</th><th>HB</th></tr></thead><tbody id="tokenTbody"></tbody></table></div>
+    <div id="tokenStatus" class="muted">No tokens yet.</div>
+    <div class="controls" id="postTokenControls" style="display:none">
+      <button class="btn btn-danger" onclick="openDeleteModal()">Delete Account</button>
+      <button class="btn btn-primary" onclick="openSimRegisterFlow()">Register SIMs</button>
+      <span class="muted" style="font-size:11px">Select checkbox first. Deletes via <code>DELETE /auth/delete-account</code>.</span>
     </div>
-    <div id="botDetail" class="muted">Select a bot row to view logs/commands.</div>
-    <div id="logs" class="logs" style="display:none"></div>
-    <div id="notifs" class="logs" style="display:none"></div>
+    <div id="simMappingArea" style="display:none;border-top:1px solid var(--line);padding:10px">
+      <div class="flex" style="margin-bottom:8px"><label style="font-size:13px">Device <select id="simBotSelect"></select></label><button class="btn btn-secondary" onclick="fetchSimsAndPackages()">Fetch SIMs &amp; Packages</button><span id="simFetchStatus" class="muted"></span></div>
+      <div id="simMappingTableWrap" class="table-wrap" style="max-height:38vh"></div>
+      <div class="controls"><button class="btn btn-primary" id="btnRegisterSims" onclick="registerSims()" disabled>Register</button><span class="muted">Empty = skip. Posts to <code>/runner/sim/{id}/package</code>.</span></div>
+      <div id="registerResult" class="logs" style="display:none"></div>
+    </div>
   </div>
+
+  <div class="card"><div class="card-h"><h2>Notifications</h2></div><div id="globalNotifs" class="logs" style="max-height:34vh"></div></div>
 </div>
 
-<div class="card" style="margin:12px">
-  <h2>Device Tokens &amp; SIM Packages — Server-Coordinated Flow
-    <button class="btn btn-primary" id="btnLoadTokens" onclick="loadDevicesAndTokens()">Load devices &amp; tokens</button>
-  </h2>
-  <div class="muted">Active bots from heartbeat appear here. Click <b>Load devices &amp; tokens</b> to ask each bot for its bearer token (from localStorage). Tokens are stored server-side and used to proxy scout API.</div>
-  <div style="overflow:auto;max-height:38vh">
-    <table>
-      <thead><tr><th><input type="checkbox" id="chkAll" onchange="toggleAll(this.checked)"></th><th>Bot</th><th>Proxy Email</th><th>Poll Inbox</th><th>State</th><th>Token</th><th>Updated</th><th>Heartbeat</th></tr></thead>
-      <tbody id="tokenTbody"></tbody>
-    </table>
-  </div>
-  <div id="tokenStatus" class="muted">No tokens loaded yet.</div>
-  <div class="controls" id="postTokenControls" style="display:none">
-    <button class="btn btn-secondary" onclick="deleteAccountPlaceholder()">Delete Account</button>
-    <button class="btn btn-primary" onclick="openSimRegisterFlow()">Register SIMs under package</button>
-    <span class="muted">Select a device (checkbox) first. Physical SIM must already be registered to the account.</span>
-  </div>
-
-  <!-- SIM / package mapping area -->
-  <div id="simMappingArea" style="display:none; border-top:1px solid #334155; padding:10px">
-    <div class="flex" style="margin-bottom:8px">
-      <label style="font-size:13px">Device:
-        <select id="simBotSelect" style="min-width:140px"></select>
-      </label>
-      <button class="btn btn-secondary" onclick="fetchSimsAndPackages()">Fetch SIMs &amp; Packages</button>
-      <span id="simFetchStatus" class="muted"></span>
+<!-- Glass delete modal -->
+<div id="deleteOverlay" class="overlay" onclick="if(event.target===this) closeDeleteModal()">
+  <div class="sheet">
+    <div class="sheet-h">Delete Account <span style="font-weight:400;color:var(--muted)">— Bot <span id="deleteBotId">—</span></span></div>
+    <div class="sheet-b">
+      <div class="muted" style="padding:0">This calls <code>DELETE https://scoutandrunner.com/api/auth/delete-account</code> with <code>{"confirmation":"DELETE_MY_ACCOUNT"}</code> using the bot's stored token. Irreversible.</div>
+      <div style="background:rgba(239,68,68,.1);border:1px solid rgba(239,68,68,.25);border-radius:12px;padding:10px;font-size:12px;color:#fecaca">Type <b>DELETE_MY_ACCOUNT</b> to confirm.</div>
+      <input id="deleteConfirm" placeholder="DELETE_MY_ACCOUNT" autocomplete="off" spellcheck="false">
+      <div id="deleteResult" class="muted" style="display:none"></div>
     </div>
-    <div id="simMappingTableWrap" style="overflow:auto;max-height:42vh"></div>
-    <div class="controls">
-      <button class="btn btn-primary" id="btnRegisterSims" onclick="registerSims()" disabled>Register</button>
-      <span class="muted">Choose a package per SIM (empty = not register). Server will POST to <code>/runner/sim/{id}/package</code> using selected device's token, then tell bot to refresh.</span>
-    </div>
-    <div id="registerResult" class="logs" style="max-height:22vh; display:none"></div>
+    <div class="sheet-f"><button class="btn btn-secondary" onclick="closeDeleteModal()">Cancel</button><button class="btn btn-danger" id="btnDeleteConfirm" onclick="confirmDeleteAccount()">Delete</button></div>
   </div>
-</div>
-
-<div class="card" style="margin:12px">
-  <h2>Recent Notifications</h2>
-  <div id="globalNotifs" class="logs" style="max-height:30vh"></div>
 </div>
 
 <script>
@@ -152,9 +165,8 @@ let timer = null;
 
 function fmtAge(heartbeat_at){
   if(!heartbeat_at) return '<span class="badge badge-gray">never</span>';
-  // Postgres TIMESTAMPTZ may come as "2026-09-21 08:19:08.123+00" or "...+00:00" or without tz
   let s = heartbeat_at.replace(' ','T');
-  if(!/[Z+\-]/.test(s.slice(10))) s += 'Z'; // assume UTC if no tz (Render = UTC, fixes 3min behind when parsed as local)
+  if(!/[Z+\-]/.test(s.slice(10))) s += 'Z';
   else if(/\+\d{2}$/.test(s)) s += ':00';
   const t = new Date(s);
   const diff = Math.floor((Date.now()-t.getTime())/1000);
@@ -174,10 +186,10 @@ async function fetchBots(){
   try{
     const r = await fetch('api/state.php', {headers: HEADERS});
     const j = await r.json();
-    if(j.ok){ bots=j.bots||[]; render(); renderGlobalNotifs(j.notifications||[]); document.getElementById('status').textContent='last poll '+new Date().toLocaleTimeString()+' • '+bots.length+' bots'; }
+    if(j.ok){ bots=j.bots||[]; render(); renderGlobalNotifs(j.notifications||[]); document.getElementById('status').textContent=bots.length+' bots • '+new Date().toLocaleTimeString(); }
     else document.getElementById('status').textContent='error: '+(j.error||'unknown');
     if(selected) loadLogs(false);
-  }catch(e){ document.getElementById('status').textContent='poll failed: '+e.message; }
+  }catch(e){ document.getElementById('status').textContent='poll '+e.message; }
 }
 function render(){
   const q = document.getElementById('filter').value.toLowerCase();
@@ -185,47 +197,45 @@ function render(){
   const count=document.getElementById('botCount');
   const muted=document.getElementById('botsMuted');
   let filtered=bots;
-  if(q) filtered=bots.filter(b=> String(b.id).includes(q) || (b.proxy_email||'').toLowerCase().includes(q) || (b.poll_inbox||'').toLowerCase().includes(q) || (b.state||'').toLowerCase().includes(q));
+  if(q) filtered=bots.filter(b=> String(b.id).includes(q) || (b.proxy_email||'').toLowerCase().includes(q) || (b.state||'').toLowerCase().includes(q));
   count.textContent=filtered.length;
   muted.style.display = filtered.length? 'none':'block';
   tbody.innerHTML = filtered.map(b=>`
     <tr class="${selected==b.id?'selected':''}" onclick="selectBot(${b.id})" style="cursor:pointer">
-      <td><b>${esc(b.id)}</b> <span style="color:#64748b">${esc(b.container_id||'')}</span></td>
+      <td><b>${esc(b.id)}</b></td>
       <td><span class="badge ${b.state==='running'?'badge-green':b.state==='paused'?'badge-yellow':'badge-gray'}">${esc(b.state||'—')}</span></td>
       <td>${esc(b.sims_count??0)}</td>
-      <td title="${esc(b.proxy_email)}">${esc((b.proxy_email||'').slice(0,22))}</td>
-      <td title="${esc(b.poll_inbox)}">${esc((b.poll_inbox||'').slice(0,22))}</td>
+      <td title="${esc(b.proxy_email)}">${esc((b.proxy_email||'').slice(0,20))}</td>
       <td>${fmtAge(b.heartbeat_at)}</td>
-      <td title="${esc(b.current_url)}">${esc((b.current_url||'').slice(0,28))}</td>
-      <td><button class="btn btn-secondary" onclick="event.stopPropagation(); selectBot(${b.id}); sendCmd('RESTART')">↻</button></td>
+      <td title="${esc(b.current_url)}">${esc((b.current_url||'').slice(0,22))}</td>
+      <td><button class="btn btn-secondary" onclick="event.stopPropagation(); selectBot(${b.id}); sendCmd('RESTART')" style="min-height:32px;padding:6px 10px">↻</button></td>
     </tr>
   `).join('');
 }
 function renderGlobalNotifs(list){
   const el=document.getElementById('globalNotifs');
-  const alertEl=document.getElementById('noSimsAlert');
-  // show red banner if any NoSimsRegistered in recent list
-  const noSims = list.filter(n=> String(n.type||'').toLowerCase()==='nosimsregistered');
-  if(alertEl){
-    if(noSims.length){
-      const latest = noSims[0];
-      alertEl.style.display='block';
-      alertEl.innerHTML='🚨 NoSimsRegistered — Bot '+esc(latest.bot_id)+' : '+esc(latest.message)+' <span style="font-weight:400;color:#fecaca">('+esc(latest.created_at)+')</span> <span style="color:#fca5a5">'+esc((latest.details||'').slice(0,120))+'</span>';
-    } else {
-      alertEl.style.display='none';
-      alertEl.innerHTML='';
-    }
+  const bHigh=document.getElementById('bannerHigh');
+  const bWarn=document.getElementById('bannerWarn');
+  const high = list.filter(n=> ['nosimsregistered','nonumberstotest','accountdeleted'].includes(String(n.type||'').toLowerCase()));
+  const warn = list.filter(n=> !high.includes(n));
+  if(bHigh){
+    if(high.length){ bHigh.style.display='block'; bHigh.innerHTML='🚨 '+high.map(h=>`${esc(h.type)} — Bot ${esc(h.bot_id)}: ${esc(h.message)} <span style="opacity:.7">(${esc(h.created_at)})</span>`).join(' • '); }
+    else { bHigh.style.display='none'; bHigh.innerHTML=''; }
+  }
+  if(bWarn){
+    if(warn.length && high.length===0){ bWarn.style.display='block'; bWarn.textContent=warn[0].type+': '+warn[0].message; }
+    else { bWarn.style.display='none'; }
   }
   if(!list.length){ el.innerHTML='<div class="muted">No notifications</div>'; return; }
   el.innerHTML=list.map(n=>{
-    const isNoSim = String(n.type||'').toLowerCase()==='nosimsregistered';
-    const bg = isNoSim ? 'background:#7f1d1d;border-left:3px solid #dc2626;padding-left:6px;' : '';
-    const typeColor = isNoSim ? '#fecaca' : '#fbbf24';
-    const priorityBadge = isNoSim ? ' <span class="badge badge-red">HIGH</span>' : '';
-    return `<div class="log-line" style="${bg}"><span class="log-time">${esc(n.created_at)}</span> <b>[${esc(n.bot_id)}]</b> <span style="color:${typeColor}">${esc(n.type)}</span>${priorityBadge} ${esc(n.message)} <span style="color:#64748b">${esc(n.details||'')}</span></div>`;
+    const t=String(n.type||'').toLowerCase();
+    const isHigh=['nosimsregistered','nonumberstotest','accountdeleted'].includes(t);
+    const bg = isHigh ? 'background:rgba(239,68,68,.10);border-left:3px solid #ef4444;padding-left:6px;' : '';
+    const col = isHigh ? '#fecaca' : '#fbbf24';
+    const badge = isHigh ? ' <span class="badge badge-red">HIGH</span>' : '';
+    return `<div class="log-line" style="${bg}"><span class="log-time">${esc(n.created_at)}</span> <b>[${esc(n.bot_id)}]</b> <span style="color:${col}">${esc(n.type)}</span>${badge} ${esc(n.message)} <span style="color:#64748b">${esc((n.details||'').slice(0,180))}</span></div>`;
   }).join('');
 }
-
 
 async function selectBot(id){
   selected=id;
@@ -244,45 +254,29 @@ async function loadLogs(showNotif){
     const j=await r.json();
     if(!j.ok) throw new Error(j.error);
     const logsEl=document.getElementById('logs');
-    const det=document.getElementById('botDetail');
-    if(j.bot){
-      det.style.display='block';
-      det.innerHTML=`<b>Bot ${esc(j.bot.id)}</b> — ${esc(j.bot.state||'—')} • sims ${esc(j.bot.sims_count)} • <span title="${esc(j.bot.current_url)}">${esc(j.bot.current_url||'')}</span><br><span style="color:#94a3b8">proxy ${esc(j.bot.proxy_email)} | inbox ${esc(j.bot.poll_inbox)} | heartbeat ${esc(j.bot.heartbeat_at||'never')}</span>`;
-      det.style.display='none';
-    }
     if(j.logs && j.logs.length){
-      logsEl.innerHTML=j.logs.map(l=>`<div class="log-line"><span class="log-time">${esc(l.created_at)}</span> <span class="log-state">[${esc(l.state||'')} sims:${esc(l.sims_count??'')} ]</span> ${esc(l.message||'')} <span style="color:#64748b">${esc(l.current_url||'')}</span></div>`).join('');
+      logsEl.innerHTML=j.logs.map(l=>`<div class="log-line"><span class="log-time">${esc(l.created_at)}</span> <span class="log-state">[${esc(l.state||'')} ]</span> ${esc(l.message||'')} <span style="color:#64748b">${esc((l.current_url||'').slice(0,40))}</span></div>`).join('');
     } else {
-      logsEl.innerHTML='<div class="muted">No logs yet</div>';
+      logsEl.innerHTML='<div class="muted">No logs</div>';
     }
-    if(showNotif!==false && j.notifications){
-      const nEl=document.getElementById('notifs');
-      // keep hidden unless toggled
-    }
-  }catch(e){ document.getElementById('logs').innerHTML='<div class="muted">load failed: '+esc(e.message)+'</div>'; }
+  }catch(e){ document.getElementById('logs').innerHTML='<div class="muted">load '+esc(e.message)+'</div>'; }
 }
 async function loadNotifications(){
-  if(!selected) return alert('Select a bot first');
-  const logsEl=document.getElementById('logs');
-  const notifsEl=document.getElementById('notifs');
-  logsEl.style.display='none';
-  notifsEl.style.display='block';
+  if(!selected) return alert('Select a bot');
+  document.getElementById('logs').style.display='none';
+  document.getElementById('notifs').style.display='block';
   try{
     const r=await fetch('api/state.php?bot_id='+selected, {headers: HEADERS});
     const j=await r.json();
     const list=j.notifications||[];
-    notifsEl.innerHTML = list.length? list.map(n=>`<div class="log-line"><span class="log-time">${esc(n.created_at)}</span> <b>${esc(n.type)}</b> ${esc(n.message)}<br><span style="color:#94a3b8">${esc(n.details||'')}</span></div>`).join('') : '<div class="muted">No notifications</div>';
-  }catch(e){ notifsEl.innerHTML='error '+esc(e.message); }
+    document.getElementById('notifs').innerHTML = list.length? list.map(n=>`<div class="log-line"><span class="log-time">${esc(n.created_at)}</span> <b>${esc(n.type)}</b> ${esc(n.message)}<br><span style="color:#94a3b8">${esc(n.details||'')}</span></div>`).join('') : '<div class="muted">No notifications</div>';
+  }catch(e){ document.getElementById('notifs').innerHTML='error '+esc(e.message); }
 }
 
 function onCmdChange(){
   const v=document.getElementById('cmdSelect').value;
-  document.getElementById('logoutHint').style.display = (v==='LOGOUT') ? 'inline-flex' : 'none';
-  if(v==='LOGOUT'){
-    const w=document.getElementById('logoutWait');
-    const raw=document.getElementById('cmdArgs').value.trim();
-    if(!raw) document.getElementById('cmdArgs').value = JSON.stringify({wait: parseInt(w.value||60)});
-  }
+  document.getElementById('logoutHint').style.display = (v==='LOGOUT') ? 'flex' : 'none';
+  if(v==='LOGOUT' && !document.getElementById('cmdArgs').value.trim()) document.getElementById('cmdArgs').value = JSON.stringify({wait: parseInt(document.getElementById('logoutWait').value||60)});
 }
 async function sendLogout(){
   const bot_id=document.getElementById('customBotId').value;
@@ -291,12 +285,12 @@ async function sendLogout(){
   await sendCommand(bot_id, 'LOGOUT', {wait});
 }
 async function sendLogoutLive(){
-  if(!selected) return alert('Select a bot first');
+  if(!selected) return alert('Select a bot');
   const wait=parseInt(document.getElementById('logoutWaitLive').value||0);
   await sendCommand(selected, 'LOGOUT', {wait});
 }
 async function sendCmd(cmd){
-  if(!selected) return alert('Select a bot first');
+  if(!selected) return alert('Select a bot');
   await sendCommand(selected, cmd, null);
 }
 async function sendCustomCommand(){
@@ -304,12 +298,8 @@ async function sendCustomCommand(){
   let cmd=document.getElementById('cmdSelect').value;
   const argsRaw=document.getElementById('cmdArgs').value.trim();
   let args=null;
-  if(argsRaw){ try{ args=JSON.parse(argsRaw);}catch{ return alert('Invalid JSON args'); } }
-  // LOGOUT convenience: if hint visible and args empty, use wait input
-  if(cmd==='LOGOUT' && !args){
-    const w=document.getElementById('logoutWait');
-    args={wait: parseInt(w.value||0)};
-  }
+  if(argsRaw){ try{ args=JSON.parse(argsRaw);}catch{ return alert('Invalid JSON'); } }
+  if(cmd==='LOGOUT' && !args) args={wait: parseInt(document.getElementById('logoutWait').value||0)};
   if(!bot_id) return alert('bot_id required');
   await sendCommand(bot_id, cmd, args);
 }
@@ -317,7 +307,7 @@ async function sendCommand(bot_id, cmd, args){
   try{
     const r=await fetch('api/command.php', {method:'POST', headers: HEADERS, body: JSON.stringify({bot_id: parseInt(bot_id), cmd, args})});
     const j=await r.json();
-    if(j.ok){ alert('Command '+cmd+' queued for bot '+bot_id+' (id '+j.id+')'); }
+    if(j.ok) alert('Queued '+cmd+' for '+bot_id+' (id '+j.id+')');
     else alert('Failed: '+(j.error||'unknown'));
   }catch(e){ alert('Send failed: '+e.message); }
 }
@@ -328,11 +318,11 @@ function resetTimer(){
   if(timer) clearInterval(timer);
   if(v>0) timer=setInterval(fetchBots, v);
 }
-setInterval(()=>{ document.getElementById('clock').textContent=new Date().toLocaleString(); },1000);
+setInterval(()=>{ document.getElementById('clock').textContent=new Date().toLocaleTimeString(); },1000);
 fetchBots();
 timer=setInterval(fetchBots, 2000);
 
-// -------- Token / SIM flow --------
+// — tokens / SIMs —
 let tokenPollTimer = null;
 let simsCache = [];
 let packagesCache = [];
@@ -341,58 +331,33 @@ function maskToken(t){
   if(!t) return '<span class="badge badge-gray">—</span>';
   t = String(t);
   if(t.length < 10) return esc(t);
-  return esc(t.slice(0,6)) + '...' + esc(t.slice(-4)) + ' <span style="color:#22c55e">●</span>';
+  return esc(t.slice(0,6)) + '...' + esc(t.slice(-4)) + ' <span style="color:var(--ok)">●</span>';
 }
 function fmtTime(s){
   if(!s) return '—';
-  try{
-    let t = s.replace(' ','T');
-    if(!/[Z+\-]/.test(t.slice(10))) t += 'Z';
-    else if(/\+\d{2}$/.test(t)) t += ':00';
-    const d = new Date(t);
-    return d.toLocaleString();
-  }catch{ return s; }
+  try{ let t=s.replace(' ','T'); if(!/[Z+\-]/.test(t.slice(10))) t+='Z'; else if(/\+\d{2}$/.test(t)) t+=':00'; return new Date(t).toLocaleString(); }catch{ return s; }
 }
-function fetchTokensTable(){
-  // refresh token table without re-queueing commands
-  if(bots.length) renderTokensTable();
-}
+function fetchTokensTable(){ if(bots.length) renderTokensTable(); }
 function renderTokensTable(){
   const tbody = document.getElementById('tokenTbody');
   const sel = document.getElementById('simBotSelect');
   if(!tbody) return;
-  // keep checked ids
   const checked = new Set([...tbody.querySelectorAll('input[type=checkbox][data-bot]:checked')].map(e=>e.getAttribute('data-bot')));
   tbody.innerHTML = bots.map(b=>{
-    const masked = b.auth_token ? maskToken(b.auth_token) : '<span class="badge badge-gray">no token</span>';
+    const masked = b.auth_token ? maskToken(b.auth_token) : '<span class="badge badge-gray">—</span>';
     const isChecked = checked.has(String(b.id)) ? 'checked' : '';
-    return `<tr>
-      <td><input type="checkbox" data-bot="${b.id}" ${isChecked} onchange="onTokenCheck()"></td>
-      <td><b>${esc(b.id)}</b></td>
-      <td title="${esc(b.proxy_email)}">${esc((b.proxy_email||'').slice(0,28))}</td>
-      <td title="${esc(b.poll_inbox)}">${esc((b.poll_inbox||'').slice(0,24))}</td>
-      <td><span class="badge badge-gray">${esc(b.state||'—')}</span></td>
-      <td title="${esc(b.auth_token||'')}">${masked}</td>
-      <td>${fmtTime(b.token_updated_at)}</td>
-      <td>${fmtAge(b.heartbeat_at)}</td>
-    </tr>`;
+    return `<tr><td><input type="checkbox" data-bot="${b.id}" ${isChecked} onchange="onTokenCheck()"></td><td><b>${esc(b.id)}</b></td><td title="${esc(b.proxy_email)}">${esc((b.proxy_email||'').slice(0,18))}</td><td title="${esc(b.auth_token||'')}">${masked}</td><td><span class="badge badge-gray">${esc(b.state||'—')}</span></td><td>${fmtAge(b.heartbeat_at)}</td></tr>`;
   }).join('');
   if(sel){
     const prev = sel.value;
-    sel.innerHTML = bots.map(b=>`<option value="${b.id}">Bot ${b.id} — ${esc((b.proxy_email||'').slice(0,18))} ${b.auth_token?'●':''}</option>`).join('');
+    sel.innerHTML = bots.map(b=>`<option value="${b.id}">Bot ${b.id} — ${esc((b.proxy_email||'').slice(0,16))} ${b.auth_token?'●':''}</option>`).join('');
     if(prev) sel.value = prev;
   }
-  document.getElementById('tokenStatus').textContent = bots.length ? `${bots.length} device(s) shown — tokens ${bots.filter(b=>b.auth_token).length}/${bots.length} loaded` : 'No bots';
+  document.getElementById('tokenStatus').textContent = bots.length ? `${bots.length} device(s) — ${bots.filter(b=>b.auth_token).length}/${bots.length} tokens` : 'No bots';
   document.getElementById('postTokenControls').style.display = bots.length ? 'flex' : 'none';
 }
-function toggleAll(checked){
-  document.querySelectorAll('#tokenTbody input[type=checkbox][data-bot]').forEach(e=> e.checked = checked);
-  onTokenCheck();
-}
-function onTokenCheck(){
-  const any = document.querySelector('#tokenTbody input[type=checkbox][data-bot]:checked');
-  document.getElementById('postTokenControls').style.display = any ? 'flex' : 'none';
-}
+function toggleAll(checked){ document.querySelectorAll('#tokenTbody input[type=checkbox][data-bot]').forEach(e=> e.checked = checked); onTokenCheck(); }
+function onTokenCheck(){ const any = document.querySelector('#tokenTbody input[type=checkbox][data-bot]:checked'); document.getElementById('postTokenControls').style.display = any ? 'flex' : 'none'; }
 function getSelectedBotId(){
   const cb = document.querySelector('#tokenTbody input[type=checkbox][data-bot]:checked');
   if(cb) return cb.getAttribute('data-bot');
@@ -405,47 +370,28 @@ async function loadDevicesAndTokens(){
   const btn = document.getElementById('btnLoadTokens');
   btn.disabled = true; btn.textContent = 'Loading…';
   try{
-    // fresh bots list first
     const r = await fetch('api/state.php', {headers: HEADERS});
     const j = await r.json();
     if(j.ok){ bots = j.bots||[]; render(); renderTokensTable(); }
-    if(!bots.length){ alert('No active bots found (heartbeat). Ensure bots are running and posting to api/heartbeat.php'); btn.disabled=false; btn.textContent='Load devices & tokens'; return; }
-    document.getElementById('tokenStatus').textContent = `Dispatching get_auth_token to ${bots.length} bot(s)…`;
-    // dispatch command to each bot
-    for(const b of bots){
-      try{
-        await fetch('api/command.php', {method:'POST', headers: HEADERS, body: JSON.stringify({bot_id: parseInt(b.id), cmd: 'get_auth_token'})});
-      }catch(e){}
-    }
-    document.getElementById('tokenStatus').textContent = `Commands queued — polling for tokens (bots reply in ~3s)…`;
-    // poll state every 1.5s for ~12s to update masked tokens
+    if(!bots.length){ alert('No bots'); btn.disabled=false; btn.textContent='Load tokens'; return; }
+    document.getElementById('tokenStatus').textContent = `Queuing get_auth_token to ${bots.length} bot(s)…`;
+    for(const b of bots){ try{ await fetch('api/command.php', {method:'POST', headers: HEADERS, body: JSON.stringify({bot_id: parseInt(b.id), cmd: 'get_auth_token'})}); }catch(e){} }
+    document.getElementById('tokenStatus').textContent = `Polling tokens…`;
     let polls = 0;
     if(tokenPollTimer) clearInterval(tokenPollTimer);
     tokenPollTimer = setInterval(async ()=>{
       polls++;
-      try{
-        const pr = await fetch('api/state.php', {headers: HEADERS});
-        const pj = await pr.json();
-        if(pj.ok){ bots = pj.bots||bots; render(); renderTokensTable(); }
-      }catch{}
-      if(polls >= 10){ clearInterval(tokenPollTimer); document.getElementById('tokenStatus').textContent = `Done — ${bots.filter(b=>b.auth_token).length}/${bots.length} token(s) loaded. Select a device then Register SIMs under package.`; btn.disabled=false; btn.textContent='Load devices & tokens'; }
+      try{ const pr = await fetch('api/state.php', {headers: HEADERS}); const pj = await pr.json(); if(pj.ok){ bots = pj.bots||bots; render(); renderTokensTable(); } }catch{}
+      if(polls >= 10){ clearInterval(tokenPollTimer); document.getElementById('tokenStatus').textContent = `Done — ${bots.filter(b=>b.auth_token).length}/${bots.length} tokens.`; btn.disabled=false; btn.textContent='Load tokens'; }
     }, 1500);
-  }catch(e){
-    document.getElementById('tokenStatus').textContent = 'Load failed: '+e.message;
-    btn.disabled=false; btn.textContent='Load devices & tokens';
-  }
-}
-function deleteAccountPlaceholder(){
-  const bid = getSelectedBotId();
-  if(!bid) return alert('Select a device first');
-  alert('Delete Account flow not yet implemented (placeholder). Selected bot '+bid+' would dispatch delete_account command.');
+  }catch(e){ document.getElementById('tokenStatus').textContent = 'Load failed: '+e.message; btn.disabled=false; btn.textContent='Load tokens'; }
 }
 function openSimRegisterFlow(){
   const bid = getSelectedBotId();
-  if(!bid) return alert('Select a device (checkbox) first');
+  if(!bid) return alert('Select device');
   document.getElementById('simMappingArea').style.display = 'block';
   document.getElementById('simBotSelect').value = bid;
-  document.getElementById('simFetchStatus').textContent = 'Ready — click Fetch SIMs & Packages';
+  document.getElementById('simFetchStatus').textContent = 'Ready — Fetch';
   document.getElementById('simMappingArea').scrollIntoView({behavior:'smooth'});
 }
 async function fetchSimsAndPackages(){
@@ -454,76 +400,66 @@ async function fetchSimsAndPackages(){
   const status = document.getElementById('simFetchStatus');
   const wrap = document.getElementById('simMappingTableWrap');
   const btnReg = document.getElementById('btnRegisterSims');
-  status.textContent = 'Fetching SIMs…';
-  wrap.innerHTML = '<div class="muted">Loading…</div>';
-  btnReg.disabled = true;
-  simsCache = []; packagesCache = [];
+  status.textContent = 'Fetching…'; wrap.innerHTML = '<div class="muted">Loading…</div>'; btnReg.disabled = true;
   try{
     const [simsRes, pkgsRes] = await Promise.all([
       fetch('api/sims.php?bot_id='+encodeURIComponent(bid), {headers: HEADERS}),
       fetch('api/packages.php?bot_id='+encodeURIComponent(bid), {headers: HEADERS})
     ]);
-    const simsJ = await simsRes.json();
-    const pkgsJ = await pkgsRes.json();
-    if(!simsJ.ok) throw new Error('SIMs: '+(simsJ.error||simsJ.body||'unknown'));
-    if(!pkgsJ.ok) throw new Error('Packages: '+(pkgsJ.error||pkgsJ.body||'unknown'));
-    simsCache = simsJ.sims||[];
-    packagesCache = pkgsJ.packages||[];
-    status.textContent = `${simsCache.length} SIM(s), ${packagesCache.length} package(s) — select per SIM then Register`;
-    if(!simsCache.length){
-      wrap.innerHTML = '<div class="muted">No SIMs found for this account. Register physical SIM first.</div>';
-      return;
-    }
-    // dedup already done server-side, but keep as-is
-    const pkgOptions = ['<option value="">— not register —</option>'].concat(packagesCache.map(p=>`<option value="${esc(p.categoryId)}">${esc(p.name)} — $${esc(p.price)} (${esc(p.carrier)})</option>`)).join('');
-    wrap.innerHTML = `<table>
-      <thead><tr><th>SIM</th><th>Carrier</th><th>Status</th><th>Current pkg</th><th>Select package</th></tr></thead>
-      <tbody>${simsCache.map((s,i)=>`
-        <tr>
-          <td><b>${esc(s.phoneNumber)}</b><br><span style="color:#64748b;font-size:11px">${esc(s.id)}</span></td>
-          <td>${esc(s.carrier)}</td>
-          <td>${esc(s.status)}</td>
-          <td>${esc(s.package?.name || s.package?.variantLabel || 'none')}</td>
-          <td><select data-sim="${esc(s.id)}" style="min-width:220px">${pkgOptions}</select></td>
-        </tr>
-      `).join('')}</tbody>
-    </table>`;
+    const simsJ = await simsRes.json(); const pkgsJ = await pkgsRes.json();
+    if(!simsJ.ok) throw new Error('SIMs: '+(simsJ.error||'unknown'));
+    if(!pkgsJ.ok) throw new Error('Packages: '+(pkgsJ.error||'unknown'));
+    simsCache = simsJ.sims||[]; packagesCache = pkgsJ.packages||[];
+    status.textContent = `${simsCache.length} SIM(s), ${packagesCache.length} pkg(s)`;
+    if(!simsCache.length){ wrap.innerHTML = '<div class="muted">No SIMs.</div>'; return; }
+    const pkgOptions = ['<option value="">— skip —</option>'].concat(packagesCache.map(p=>`<option value="${esc(p.categoryId)}">${esc(p.name)} — $${esc(p.price)}</option>`)).join('');
+    wrap.innerHTML = `<table><thead><tr><th>SIM</th><th>Carrier</th><th>Status</th><th>Package</th></tr></thead><tbody>${simsCache.map(s=>`
+        <tr><td><b>${esc(s.phoneNumber)}</b><br><span style="color:var(--muted);font-size:10px">${esc(s.id)}</span></td><td>${esc(s.carrier)}</td><td>${esc(s.status)}</td><td><select data-sim="${esc(s.id)}" style="min-width:180px">${pkgOptions}</select></td></tr>
+      `).join('')}</tbody></table>`;
     btnReg.disabled = false;
-  }catch(e){
-    status.textContent = 'Fetch failed: '+e.message;
-    wrap.innerHTML = `<div class="muted" style="color:#f87171">Error: ${esc(e.message)}</div>`;
-  }
+  }catch(e){ status.textContent = 'Fetch failed: '+e.message; wrap.innerHTML = `<div class="muted" style="color:#f87171">Error: ${esc(e.message)}</div>`; }
 }
 async function registerSims(){
   const bid = document.getElementById('simBotSelect').value;
   if(!bid) return alert('Select device');
-  const selects = document.querySelectorAll('#simMappingTableWrap select[data-sim]');
-  const mappings = [...selects].map(s=>({simId: s.getAttribute('data-sim'), packageId: s.value || null}));
+  const mappings = [...document.querySelectorAll('#simMappingTableWrap select[data-sim]')].map(s=>({simId: s.getAttribute('data-sim'), packageId: s.value || null}));
   const toRegister = mappings.filter(m=>m.packageId);
-  if(!toRegister.length) return alert('Select at least one package (non-empty)');
-  if(!confirm(`Register ${toRegister.length} SIM(s) using bot ${bid}?`)) return;
-  const btn = document.getElementById('btnRegisterSims');
-  btn.disabled = true; btn.textContent = 'Registering…';
-  const resultEl = document.getElementById('registerResult');
-  resultEl.style.display = 'block';
-  resultEl.innerHTML = '<div class="muted">Posting to api/register_sims.php…</div>';
+  if(!toRegister.length) return alert('Select at least one package');
+  if(!confirm(`Register ${toRegister.length} SIM(s) via bot ${bid}?`)) return;
+  const btn = document.getElementById('btnRegisterSims'); btn.disabled = true; btn.textContent = 'Registering…';
+  const resultEl = document.getElementById('registerResult'); resultEl.style.display = 'block'; resultEl.innerHTML = '<div class="muted">Posting…</div>';
   try{
     const r = await fetch('api/register_sims.php', {method:'POST', headers: HEADERS, body: JSON.stringify({bot_id: parseInt(bid), mappings})});
-    const j = await r.json();
-    if(!j.ok) throw new Error(j.error||'unknown');
-    const lines = j.results.map(rr=>{
-      if(rr.skipped) return `<div class="log-line"><span style="color:#94a3b8">[skip]</span> ${esc(rr.simId)} — ${esc(rr.msg||rr.error||'skipped')}</div>`;
-      const col = rr.ok ? '#22c55e' : '#ef4444';
-      const detail = rr.ok ? JSON.stringify(rr.response).slice(0,180) : esc(rr.error||'fail');
-      return `<div class="log-line"><span style="color:${col}">${rr.ok?'[ok]':'[fail]'}</span> ${esc(rr.simId)} → ${esc(rr.packageId)} (http ${esc(rr.http)}) ${detail}</div>`;
-    }).join('');
-    resultEl.innerHTML = `<div style="color:#e2e8f0">Bot ${esc(bid)} — refresh cmd ${esc(j.refresh_command_id||'queued')}<br>${lines}</div>`;
-    document.getElementById('simFetchStatus').textContent = `Registered ${toRegister.length} — bot will refresh (state handler decides next move)`;
-  }catch(e){
-    resultEl.innerHTML = `<div style="color:#f87171">Register failed: ${esc(e.message)}</div>`;
-  }finally{
-    btn.disabled = false; btn.textContent = 'Register';
-  }
+    const j = await r.json(); if(!j.ok) throw new Error(j.error||'unknown');
+    resultEl.innerHTML = j.results.map(rr=> rr.skipped ? `<div class="log-line" style="color:var(--muted)">[skip] ${esc(rr.simId)}</div>` : `<div class="log-line"><span style="color:${rr.ok?'var(--ok)':'var(--danger)'}">${rr.ok?'[ok]':'[fail]'}</span> ${esc(rr.simId)} → ${esc(rr.packageId)} (http ${esc(rr.http)}) ${esc((rr.error||JSON.stringify(rr.response||'')).slice(0,120))}</div>`).join('');
+  }catch(e){ resultEl.innerHTML = `<div style="color:#f87171">Failed: ${esc(e.message)}</div>`; }
+  finally{ btn.disabled = false; btn.textContent = 'Register'; }
+}
+// — delete account glass —
+function openDeleteModal(){
+  const bid = getSelectedBotId();
+  if(!bid) return alert('Select device checkbox first');
+  document.getElementById('deleteBotId').textContent=bid;
+  document.getElementById('deleteConfirm').value='';
+  document.getElementById('deleteResult').style.display='none';
+  document.getElementById('deleteResult').innerHTML='';
+  document.getElementById('deleteOverlay').style.display='flex';
+  setTimeout(()=>document.getElementById('deleteConfirm').focus(),80);
+}
+function closeDeleteModal(){ document.getElementById('deleteOverlay').style.display='none'; }
+async function confirmDeleteAccount(){
+  const bid = document.getElementById('deleteBotId').textContent;
+  const val = document.getElementById('deleteConfirm').value.trim();
+  if(val !== 'DELETE_MY_ACCOUNT') return alert('Type DELETE_MY_ACCOUNT exactly');
+  const btn=document.getElementById('btnDeleteConfirm'); const resEl=document.getElementById('deleteResult');
+  btn.disabled=true; btn.textContent='Deleting…'; resEl.style.display='block'; resEl.innerHTML='<span class="muted">Calling api/delete_account.php…</span>';
+  try{
+    const r=await fetch('api/delete_account.php', {method:'POST', headers: HEADERS, body: JSON.stringify({bot_id: parseInt(bid), confirmation:'DELETE_MY_ACCOUNT'})});
+    const t=await r.text(); let j; try{ j=JSON.parse(t);}catch{ j={raw:t, http:r.status} }
+    if(r.ok && (j.ok || r.status===200)){ resEl.innerHTML=`<span style="color:var(--ok)">✓ Account deleted (http ${r.status})</span><br><span style="color:var(--muted)">${esc(t.slice(0,400))}</span>`; setTimeout(()=>{ closeDeleteModal(); fetchBots(); },1200); }
+    else { resEl.innerHTML=`<span style="color:var(--danger)">✗ Failed http ${r.status}</span><br><span style="color:var(--muted)">${esc(t.slice(0,600))}</span>`; }
+  }catch(e){ resEl.innerHTML=`<span style="color:var(--danger)">Error: ${esc(e.message)}</span>`; }
+  finally{ btn.disabled=false; btn.textContent='Delete'; }
 }
 </script>
 </body>
