@@ -132,7 +132,7 @@ tr.selected td{background:rgba(59,130,246,.10)}
 
   <!-- LIVE PAGE -->
   <div id="tab-live" class="tab">
-    <div class="card"><div class="card-h"><h2>Live — Bot <span id="liveId">—</span></h2><span class="flex"><button class="btn btn-secondary" onclick="loadLogs()">Logs</button><button class="btn btn-secondary" onclick="loadNotifications()">🔔</button></span></div>
+    <div class="card"><div class="card-h"><h2>Live — Bot <span id="liveId">—</span></h2><span class="flex"><button class="btn btn-secondary" onclick="loadLogs()">Logs</button><button class="btn btn-secondary" onclick="loadNotifications()">🔔</button><button class="btn btn-primary" onclick="openCallStatus()">Call Status</button></span></div>
       <div class="controls"><button class="btn btn-secondary" onclick="sendCmd('PAUSE')">Pause</button><button class="btn btn-secondary" onclick="sendCmd('RESUME')">Resume</button><button class="btn btn-danger" onclick="sendCmd('RESTART')">Restart</button>
         <span class="flex" style="width:100%"><input id="logoutWaitLive" type="number" min="0" max="86400" value="60" style="width:88px"><button class="btn btn-danger" onclick="sendLogoutLive()" style="flex:1">Logout &amp; Wait</button></span>
       </div>
@@ -140,6 +140,14 @@ tr.selected td{background:rgba(59,130,246,.10)}
       <div id="logs" class="logs" style="display:none;max-height:46vh"></div>
       <div id="notifs" class="logs" style="display:none;max-height:46vh"></div>
       <div id="liveLogs" class="logs" style="display:none"></div>
+    </div>
+  </div>
+  <!-- CALL STATUS (opens as page within Live) -->
+  <div id="callStatusOverlay" class="overlay" onclick="if(event.target===this) closeCallStatus()">
+    <div class="sheet" style="max-width:520px">
+      <div class="sheet-h">Call Status — Bot <span id="csBotId">—</span> <span id="csUpdated" class="muted" style="padding:0"></span> <button class="btn btn-secondary" style="float:right;min-height:28px;padding:4px 8px" onclick="closeCallStatus()">✕</button></div>
+      <div class="sheet-b" id="csBody" style="max-height:64vh;overflow:auto"></div>
+      <div class="sheet-f"><button class="btn btn-secondary" onclick="closeCallStatus()">Close</button><button class="btn btn-primary" onclick="refreshCallStatus()">Refresh</button></div>
     </div>
   </div>
 
@@ -512,6 +520,36 @@ function goToSite(){
     window.open('https://scoutandrunner.com/scout','_blank');
     alert('No token stored for bot '+bid+' — Load tokens first. Opened Scout login.');
   }
+}
+function openCallStatus(){
+  if(!selected) return alert('Select a bot first (tap row in Fleet)');
+  document.getElementById('csBotId').textContent=selected;
+  document.getElementById('csUpdated').textContent='';
+  document.getElementById('csBody').innerHTML='<div class="muted">Loading…</div>';
+  document.getElementById('callStatusOverlay').style.display='flex';
+  refreshCallStatus();
+}
+function closeCallStatus(){ document.getElementById('callStatusOverlay').style.display='none'; }
+async function refreshCallStatus(){
+  const bid=selected; if(!bid) return;
+  const body=document.getElementById('csBody'); const upd=document.getElementById('csUpdated');
+  try{
+    const r=await fetch('api/sims_status.php?bot_id='+encodeURIComponent(bid), {headers: HEADERS});
+    const j=await r.json(); if(!j.ok) throw new Error(j.error);
+    const sims=j.sims||[];
+    if(upd) upd.textContent = j.updated_at ? ' — '+fmtTime(j.updated_at) : '';
+    if(!sims.length || (sims.length===1 && sims[0].phone==='dashboard_count')){ body.innerHTML='<div class="muted">No API SIM data yet — bot reports on next test_numbers_available tick. Dashboard count: '+(sims[0]?.status||'—')+'</div>'; return; }
+    const maxed=sims.filter(s=>s.isMax), cur=sims.find(s=>s.isCurrent) || null;
+    let html=`<div class="muted" style="padding:0 0 8px">${sims.length} SIM(s) • <span style="color:#fecaca">${maxed.length} at 8/8 max</span> • current ${cur?cur.phone+' '+cur.cycle+'/8':'—'}</div>`;
+    html+=sims.map(s=>{
+      const pct=Math.min(100, Math.round((s.cycle/8)*100));
+      const barColor=s.isMax?'#ef4444':(s.isCurrent?'#3b82f6':'#22c55e');
+      const badge=s.isMax?'<span class="badge badge-red">MAX 8/8</span>':(s.isCurrent?'<span class="badge badge-green">CURRENT '+s.cycle+'/8</span>':'<span class="badge badge-gray">'+s.cycle+'/8</span>');
+      const border=s.isCurrent?'border:1px solid #3b82f6;':(s.isMax?'border:1px solid rgba(239,68,68,.3);':'');
+      return `<div style="background:rgba(255,255,255,.04);border-radius:10px;padding:8px;margin-bottom:6px;${border}"><div style="display:flex;justify-content:space-between;gap:8px;align-items:center"><b>${esc(s.phone)}</b> ${badge}</div><div style="height:6px;background:rgba(255,255,255,.08);border-radius:999px;margin-top:6px;overflow:hidden"><div style="width:${pct}%;height:100%;background:${barColor}"></div></div><div class="muted" style="padding:2px 0 0;font-size:10px">${esc(s.status)}${s.cooldownEndsAt?' • cooldown '+fmtTime(s.cooldownEndsAt):''}</div></div>`;
+    }).join('');
+    body.innerHTML=html;
+  }catch(e){ body.innerHTML='<div class="muted" style="color:#f87171">Load failed: '+esc(e.message)+'</div>'; }
 }
 async function deleteAccountNow(){
   const bid = getSelectedBotId();
