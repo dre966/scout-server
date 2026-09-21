@@ -534,11 +534,31 @@ async function refreshCallStatus(){
   const bid=selected; if(!bid) return;
   const body=document.getElementById('csBody'); const upd=document.getElementById('csUpdated');
   try{
-    const r=await fetch('api/sims_status.php?bot_id='+encodeURIComponent(bid), {headers: HEADERS});
-    const j=await r.json(); if(!j.ok) throw new Error(j.error);
-    const sims=j.sims||[];
-    if(upd) upd.textContent = j.updated_at ? ' — '+fmtTime(j.updated_at) : '';
-    if(!sims.length || (sims.length===1 && sims[0].phone==='dashboard_count')){ body.innerHTML='<div class="muted">No API SIM data yet — bot reports on next test_numbers_available tick. Dashboard count: '+(sims[0]?.status||'—')+'</div>'; return; }
+    let sims=[], updated=null;
+    try{
+      const r=await fetch('api/sims_status.php?bot_id='+encodeURIComponent(bid), {headers: HEADERS});
+      const j=await r.json(); if(j.ok){ sims=j.sims||[]; updated=j.updated_at; }
+    }catch(e){}
+    // fallback to live Scout API (api/scout/sims) if bot cache empty — you said json is there
+    if(!sims.length || (sims.length===1 && sims[0].phone==='dashboard_count')){
+      try{
+        const rs=await fetch('api/sims.php?bot_id='+encodeURIComponent(bid), {headers: HEADERS});
+        const js=await rs.json();
+        if(js.ok && js.sims && js.sims.length){
+          sims = js.sims.map(s=>({phone:s.phoneNumber||s.phone||'?', cycle:0, status:s.status||'?', isMax:false, isCurrent:false, cooldownEndsAt:null, id:s.id}));
+          // try to parse cycle if present in raw
+          sims = js.sims.map(s=>{
+            const raw=s.raw||s;
+            const simObj=raw.sim||raw;
+            const cyc=parseInt(simObj.testsInCycle??s.testsInCycle??0);
+            return {phone:simObj.phoneNumber||s.phoneNumber||'?', cycle:cyc, status:simObj.status||s.status||'?', isMax:cyc>=8, isCurrent:false, cooldownEndsAt:simObj.cooldownEndsAt||null, id:simObj.id||s.id};
+          });
+          updated='live';
+        }
+      }catch(e){}
+    }
+    if(upd) upd.textContent = updated ? ' — '+(updated==='live'?'live':fmtTime(updated)) : '';
+    if(!sims.length || (sims.length===1 && sims[0].phone==='dashboard_count')){ body.innerHTML='<div class="muted">No SIM data — bot not yet reported and live fetch empty. Dashboard count: '+(sims[0]?.status||'—')+'</div>'; return; }
     const maxed=sims.filter(s=>s.isMax), cur=sims.find(s=>s.isCurrent) || null;
     let html=`<div class="muted" style="padding:0 0 8px">${sims.length} SIM(s) • <span style="color:#fecaca">${maxed.length} at 8/8 max</span> • current ${cur?cur.phone+' '+cur.cycle+'/8':'—'}</div>`;
     html+=sims.map(s=>{
