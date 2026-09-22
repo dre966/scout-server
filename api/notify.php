@@ -33,7 +33,7 @@ if ($bot_id === null || $type === null) {
 try {
     $detailsJson = $details !== null ? (is_string($details) ? $details : json_encode($details)) : null;
     $priority = $data['priority'] ?? null;
-    if (!$priority && in_array($type, ['NoSimsRegistered','NoNumbersToTest','AccountDeleted'], true)) $priority = 'high';
+    if (!$priority && in_array($type, ['NoSimsRegistered','NoNumbersToTest','AccountDeleted','StuckSlots'], true)) $priority = 'high';
 
     // Postgres: priority column exists in schema.sql; no SHOW COLUMNS check needed
     $stmt = $pdo->prepare("INSERT INTO notifications (bot_id, type, message, details, priority, created_at) VALUES (:bot_id, :type, :message, :details, :priority, NOW())");

@@ -268,7 +268,7 @@ function renderGlobalNotifs(list){
   const bWarn=document.getElementById('bannerWarn');
   // only show HIGH from last 2 mins on other pages (sensitive)
   const now=Date.now();
-  const highAll = list.filter(n=> ['nosimsregistered','nonumberstotest','accountdeleted'].includes(String(n.type||'').toLowerCase()));
+  const highAll = list.filter(n=> ['nosimsregistered','nonumberstotest','accountdeleted','stuckslots'].includes(String(n.type||'').toLowerCase()));
   const high = highAll.filter(n=>{
     let t=n.created_at.replace(' ','T'); if(!/[Z+\-]/.test(t.slice(10))) t+='Z'; else if(/\+\d{2}$/.test(t)) t+=':00';
     const d=new Date(t).getTime(); return !isNaN(d) && (now - d) < 120000;
@@ -288,7 +288,7 @@ function renderGlobalNotifs(list){
   if(!list.length){ el.innerHTML='<div class="muted">No notifications</div>'; return; }
   el.innerHTML=list.map(n=>{
     const t=String(n.type||'').toLowerCase();
-    const isHigh=['nosimsregistered','nonumberstotest','accountdeleted'].includes(t);
+    const isHigh=['nosimsregistered','nonumberstotest','accountdeleted','stuckslots'].includes(t);
     const bg = isHigh ? 'background:rgba(239,68,68,.10);border-left:3px solid #ef4444;padding-left:6px;' : '';
     const col = isHigh ? '#fecaca' : '#fbbf24';
     const badge = isHigh ? ' <span class="badge badge-red">HIGH</span>' : '';
