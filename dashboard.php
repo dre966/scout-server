@@ -161,9 +161,10 @@ tr.selected td{background:rgba(59,130,246,.10)}
     <div class="controls" id="postTokenControls" style="display:none">
       <button class="btn btn-primary" onclick="goToSite()">↗ Go to site</button>
       <button class="btn btn-primary" onclick="openCallStatus()">Call Status</button>
+      <button class="btn btn-secondary" onclick="copyLicenseCapture()">Copy Supabase + License</button>
       <button class="btn btn-danger" onclick="deleteAccountNow()">Delete Account</button>
       <button class="btn btn-primary" onclick="openSimRegisterFlow()">Register SIMs</button>
-      <span class="muted" style="font-size:11px">Select checkbox — Call Status queries server directly with that bot's token.</span>
+      <span class="muted" style="font-size:11px">Select checkbox — Go to site now hits create-code fresh.</span>
     </div>
     <div id="simMappingArea" style="display:none;border-top:1px solid var(--line);padding:10px">
       <div class="flex" style="margin-bottom:8px"><label style="font-size:13px">Device <select id="simBotSelect"></select></label><button class="btn btn-secondary" onclick="fetchSimsAndPackages()">Fetch SIMs &amp; Packages</button><span id="simFetchStatus" class="muted"></span></div>
@@ -529,23 +530,42 @@ async function registerSims(){
   }catch(e){ resultEl.innerHTML = `<div style="color:#f87171">Failed: ${esc(e.message)}</div>`; }
   finally{ btn.disabled = false; btn.textContent = 'Register'; }
 }
-function goToSite(){
+async function goToSite(){
   const bid=getSelectedBotId();
   if(bid===null || bid===undefined || bid==='') return alert('Select device checkbox first');
-  const bot=bots.find(b=>String(b.id)===String(bid));
-  const token=bot?.auth_token||'';
-  if(token){
-    try{ navigator.clipboard.writeText(token); }catch(e){}
-    // Use S.token extra (intent extras) — query string truncates JWT on some Chrome
-    const intent = `intent://go#Intent;scheme=scout;package=com.scout.webview;S.token=${encodeURIComponent(token)};S.url=${encodeURIComponent('https://scoutandrunner.com/scout')};end`;
-    const helper = `api/goto.php?bot_id=${encodeURIComponent(bid)}`;
-    window.location.href = intent;
-    // fallback to helper if WebView not installed (intent fails silently) — open helper after 1.1s
-    setTimeout(()=>{ window.open(helper,'_blank'); }, 1100);
-  } else {
-    window.open('https://scoutandrunner.com/scout','_blank');
-    alert('No token stored for bot '+bid+' — Load tokens first. Opened Scout login.');
+  // fresh Unetwork code per click (expires fast, stored supabase+license from license_select)
+  try{
+    const r=await fetch('api/unetwork_fresh_code.php?bot_id='+encodeURIComponent(bid), {headers: HEADERS});
+    const j=await r.json();
+    if(j.ok && j.code){
+      window.open('https://scoutandrunner.com/auth/unetwork?code='+encodeURIComponent(j.code),'_blank');
+      return;
+    }
+    throw new Error(j.error||'no code');
+  }catch(e){
+    // fallback to Scout WebView if no Unetwork capture yet
+    const bot=bots.find(b=>String(b.id)===String(bid));
+    const token=bot?.auth_token||'';
+    if(token){
+      const intent = `intent://go#Intent;scheme=scout;package=com.scout.webview;S.token=${encodeURIComponent(token)};S.url=${encodeURIComponent('https://scoutandrunner.com/scout')};end`;
+      window.location.href = intent;
+    } else {
+      window.open('https://scoutandrunner.com/scout','_blank');
+      alert('No supabase capture yet — bot must hit license_select to store supabase+license. '+e.message);
+    }
   }
+}
+async function copyLicenseCapture(){
+  const bid=getSelectedBotId();
+  if(bid===null||bid===undefined||bid==='') return alert('Select device checkbox first');
+  try{
+    const r=await fetch('api/license_capture.php?bot_id='+encodeURIComponent(bid), {headers: HEADERS});
+    const j=await r.json();
+    if(!j.ok) throw new Error(j.error);
+    const txt=`supabaseToken:\n${j.supabaseToken||'—'}\n\nlicenseId:\n${j.licenseId||'—'}`;
+    await navigator.clipboard.writeText(txt);
+    alert('Copied supabaseToken + licenseId');
+  }catch(e){ alert('Copy failed: '+e.message); }
 }
 function openCallStatus(){
   const bid=getSelectedBotId();
