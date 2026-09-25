@@ -533,26 +533,13 @@ async function registerSims(){
 async function goToSite(){
   const bid=getSelectedBotId();
   if(bid===null || bid===undefined || bid==='') return alert('Select device checkbox first');
-  // fresh Unetwork code per click (expires fast, stored supabase+license from license_select)
   try{
     const r=await fetch('api/unetwork_fresh_code.php?bot_id='+encodeURIComponent(bid), {headers: HEADERS});
     const j=await r.json();
-    if(j.ok && j.code){
-      window.open('https://scoutandrunner.com/auth/unetwork?code='+encodeURIComponent(j.code),'_blank');
-      return;
-    }
-    throw new Error(j.error||'no code');
+    if(!j.ok || !j.code) throw new Error(j.error||'no code');
+    window.open('https://scoutandrunner.com/auth/unetwork?code='+encodeURIComponent(j.code),'_blank');
   }catch(e){
-    // fallback to Scout WebView if no Unetwork capture yet
-    const bot=bots.find(b=>String(b.id)===String(bid));
-    const token=bot?.auth_token||'';
-    if(token){
-      const intent = `intent://go#Intent;scheme=scout;package=com.scout.webview;S.token=${encodeURIComponent(token)};S.url=${encodeURIComponent('https://scoutandrunner.com/scout')};end`;
-      window.location.href = intent;
-    } else {
-      window.open('https://scoutandrunner.com/scout','_blank');
-      alert('No supabase capture yet — bot must hit license_select to store supabase+license. '+e.message);
-    }
+    alert('Go to site failed: '+e.message+' — bot must hit license_select to capture supabase+license first');
   }
 }
 async function copyLicenseCapture(){
