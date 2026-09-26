@@ -11,7 +11,7 @@ require_once __DIR__ . '/../config/db.php';
 $bot_id=$_GET['bot_id']??$_POST['bot_id']??null;
 if($bot_id===null||$bot_id===''){http_response_code(400);echo json_encode(['ok'=>false,'error'=>'bot_id required']);exit;}
 try{
-    $lc=$pdo->prepare("SELECT supabase_token, license_id FROM bot_license_capture WHERE bot_id=:id");
+    $lc=$pdo->prepare("SELECT supabase_token, license_id, updated_at FROM bot_license_capture WHERE bot_id=:id");
     $lc->execute([':id'=>(int)$bot_id]);
     $lr=$lc->fetch();
     if(!$lr || !$lr['supabase_token'] || !$lr['license_id']){
@@ -19,6 +19,20 @@ try{
         exit;
     }
     $supa=$lr['supabase_token']; $lic=$lr['license_id'];
+    // decode JWT exp (no signature check) so an expired capture gives a clear error
+    $exp=null;
+    $parts=explode('.',$supa);
+    if(count($parts)>=2){
+        $pl=strtr($parts[1],'-_','+/');
+        $pd=json_decode(base64_decode($pl),true);
+        if(is_array($pd)&&isset($pd['exp'])) $exp=(int)$pd['exp'];
+    }
+    if($exp!==null && $exp < time()){
+        $age=isset($lr['updated_at'])?$lr['updated_at']:null;
+        http_response_code(410);
+        echo json_encode(['ok'=>false,'error'=>'supabase token EXPIRED at '.gmdate('c',$exp).' — bot must re-hit license_select to recapture','expired_at'=>gmdate('c',$exp),'captured_at'=>$age]);
+        exit;
+    }
     $b=$pdo->prepare("SELECT proxy_email FROM bots WHERE id=:id");
     $b->execute([':id'=>(int)$bot_id]);
     $br=$b->fetch();
