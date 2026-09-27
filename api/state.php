@@ -58,8 +58,27 @@ if ($method === 'GET') {
             $bots = $pdo->query("SELECT * FROM bots ORDER BY heartbeat_at DESC, id ASC")->fetchAll();
             // Also fetch counts
             $logsCnt = $pdo->query("SELECT bot_id, COUNT(*) as cnt FROM bot_logs GROUP BY bot_id")->fetchAll(PDO::FETCH_KEY_PAIR);
-            // Attach log counts
-            foreach ($bots as &$b) { $b['logs_count'] = $logsCnt[$b['id']] ?? 0; }
+            // Per-bot SIM stats from cache (total + how many are at 8/8 max)
+            $simTot = []; $simMax = [];
+            try {
+                $pdo->exec("CREATE TABLE IF NOT EXISTS bot_sims_status (bot_id INTEGER PRIMARY KEY, sims_json TEXT, updated_at TIMESTAMPTZ DEFAULT NOW())");
+                $rows = $pdo->query("SELECT bot_id, sims_json FROM bot_sims_status")->fetchAll();
+                foreach ($rows as $r) {
+                    $sims = $r['sims_json'] ? json_decode($r['sims_json'], true) : null;
+                    if (!is_array($sims)) $sims = [];
+                    $mx = 0;
+                    foreach ($sims as $s) { if (!empty($s['isMax'])) $mx++; }
+                    $simTot[(int)$r['bot_id']] = count($sims);
+                    $simMax[(int)$r['bot_id']] = $mx;
+                }
+            } catch (Exception $e) {}
+
+            foreach ($bots as &$b) {
+                $b['logs_count'] = $logsCnt[$b['id']] ?? 0;
+                $id = (int)$b['id'];
+                $b['sims_maxed'] = $simMax[$id] ?? 0;
+                $b['sims_total'] = array_key_exists($id, $simTot) ? $simTot[$id] : (int)($b['sims_count'] ?? 0);
+            }
             unset($b);
 
             // Recent notifications overall

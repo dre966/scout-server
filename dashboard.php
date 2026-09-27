@@ -128,10 +128,11 @@ function render(){
   let filtered=bots; if(q) filtered=bots.filter(b=> String(b.id).includes(q) || (b.proxy_email||'').toLowerCase().includes(q) || (b.state||'').toLowerCase().includes(q));
   count.textContent=filtered.length; muted.style.display=filtered.length?'none':'block';
   tbody.innerHTML=filtered.map(b=>{
-    const sims=b.sims_count??0; const pct=Math.min(100,Math.round((sims/8)*100));
+    const total=b.sims_total??b.sims_count??0; const maxed=b.sims_maxed??0;
+    const pct=total>0?Math.min(100,Math.round((maxed/total)*100)):0;
     return `<tr class="${selected==b.id?'selected':''}" onclick="selectBot(${b.id})" style="cursor:pointer">
       <td><b>${esc(b.id)}</b><div class="small">${esc((b.container_id||'').slice(0,10))}</div></td>
-      <td><div><span class="badge ${b.state==='scout_dashboard'?'badge-green':'badge-gray'}">${esc((b.state||'—').slice(0,18))}</span></div><div class="progress" style="margin-top:4px"><div style="width:${pct}%;background:${pct>=100?'var(--danger)':pct>=50?'var(--warn)':'var(--ok)'}"></div></div><div class="small">${sims}/8 sims</div></td>
+      <td><div><span class="badge ${b.state==='scout_dashboard'?'badge-green':'badge-gray'}">${esc((b.state||'—').slice(0,18))}</span></div><div class="progress" style="margin-top:4px"><div style="width:${pct}%;background:${pct>=100?'var(--danger)':pct>=50?'var(--warn)':'var(--ok)'}"></div></div><div class="small">${maxed}/${total} sims at max</div></td>
       <td><div>${esc((b.proxy_email||'').split('@')[0])}</div><div class="small">${esc(b.poll_inbox||'')}</div></td>
       <td>${fmtAge(b.heartbeat_at)}<div class="small">${esc((b.current_url||'').slice(0,22))}</div></td>
       <td><div style="display:flex;gap:4px"><button class="btn" onclick="event.stopPropagation();sendWake(${b.id})">Wake</button><button class="btn" onclick="event.stopPropagation();sendSleep(${b.id})">Sleep</button><button class="btn btn-danger" onclick="event.stopPropagation();removeBot(${b.id})">✕</button><button class="btn" onclick="event.stopPropagation();selectBot(${b.id});sendCmd('RESTART')">↻</button></div></td>
