@@ -61,8 +61,9 @@ if ($method === 'GET') {
             // Per-bot SIM stats from cache (total + how many are at 8/8 max)
             $simTot = []; $simMax = [];
             try {
-                $pdo->exec("CREATE TABLE IF NOT EXISTS bot_sims_status (bot_id INTEGER PRIMARY KEY, sims_json TEXT, updated_at TIMESTAMPTZ DEFAULT NOW())");
-                $rows = $pdo->query("SELECT bot_id, sims_json FROM bot_sims_status")->fetchAll();
+                $pdo->exec("CREATE TABLE IF NOT EXISTS bot_sims_status (bot_id INTEGER PRIMARY KEY, sims_json TEXT, count_total INTEGER, updated_at TIMESTAMPTZ DEFAULT NOW())");
+                try { $pdo->exec("ALTER TABLE bot_sims_status ADD COLUMN IF NOT EXISTS count_total INTEGER"); } catch (Exception $e) {}
+                $rows = $pdo->query("SELECT bot_id, sims_json, count_total FROM bot_sims_status")->fetchAll();
                 foreach ($rows as $r) {
                     $sims = $r['sims_json'] ? json_decode($r['sims_json'], true) : null;
                     if (!is_array($sims)) $sims = [];
@@ -77,12 +78,17 @@ if ($method === 'GET') {
                         if (!empty($s['isMax'])) $mx++;
                     }
                     $bid = (int)$r['bot_id'];
-                    if ($real > 0) {
-                        $simTot[$bid] = $real;
-                        $simMax[$bid] = $mx;
+                    $total = null;
+                    if ($r['count_total'] !== null) {
+                        $total = (int)$r['count_total'];           // freshest count (count pings never wipe the list)
+                    } elseif ($real > 0) {
+                        $total = $real;
                     } elseif ($countOnly !== null) {
-                        $simTot[$bid] = $countOnly;
-                        $simMax[$bid] = 0; // maxed unknown until the full list lands
+                        $total = $countOnly;
+                    }
+                    if ($total !== null) {
+                        $simTot[$bid] = $total;
+                        $simMax[$bid] = $real > 0 ? $mx : 0;       // maxed unknown until the full list lands
                     }
                 }
             } catch (Exception $e) {}

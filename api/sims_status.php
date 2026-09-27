@@ -19,9 +19,11 @@ try {
     $pdo->exec("CREATE TABLE IF NOT EXISTS bot_sims_status (
         bot_id INTEGER PRIMARY KEY,
         sims_json TEXT,
+        count_total INTEGER,
         updated_at TIMESTAMPTZ DEFAULT NOW()
     )");
 } catch (Exception $e) {}
+try { $pdo->exec("ALTER TABLE bot_sims_status ADD COLUMN IF NOT EXISTS count_total INTEGER"); } catch (Exception $e) {}
 
 $method = $_SERVER['REQUEST_METHOD'];
 if ($method === 'POST') {
@@ -33,29 +35,29 @@ if ($method === 'POST') {
     if ($bot_id === null) { http_response_code(400); echo json_encode(['ok'=>false,'error'=>'bot_id required']); exit; }
     if ($sims === null) { http_response_code(400); echo json_encode(['ok'=>false,'error'=>'sims array required']); exit; }
 
-    // Count-only ping ("dashboard_count") must not wipe a real SIM list
+    // Count-only ping ("dashboard_count") -> store the number, never touch the real SIM list
     if (is_array($sims) && count($sims) === 1 && (($sims[0]['phone'] ?? '') === 'dashboard_count')) {
+        $n = null;
+        if (preg_match('/total:(\d+)/', (string)($sims[0]['status'] ?? ''), $m)) $n = (int)$m[1];
         try {
-            $n = null;
-            if (preg_match('/total:(\d+)/', (string)($sims[0]['status'] ?? ''), $m)) $n = (int)$m[1];
-            $st = $pdo->prepare("SELECT sims_json FROM bot_sims_status WHERE bot_id=:id");
-            $st->execute([':id' => (int)$bot_id]);
-            $row = $st->fetch();
-            $existing = ($row && $row['sims_json']) ? json_decode($row['sims_json'], true) : [];
-            $realCount = 0;
-            if (is_array($existing)) {
-                foreach ($existing as $s) { if ((($s['phone'] ?? '') !== 'dashboard_count')) $realCount++; }
+            if ($n !== null) {
+                $pdo->prepare("INSERT INTO bot_sims_status (bot_id, sims_json, count_total, updated_at) VALUES (:id, NULL, :n, NOW())
+                               ON CONFLICT (bot_id) DO UPDATE SET count_total=EXCLUDED.count_total, updated_at=NOW()")
+                    ->execute([':id'=>(int)$bot_id, ':n'=>$n]);
+            } else {
+                $pdo->prepare("INSERT INTO bot_sims_status (bot_id, updated_at) VALUES (:id, NOW())
+                               ON CONFLICT (bot_id) DO UPDATE SET updated_at=NOW()")
+                    ->execute([':id'=>(int)$bot_id]);
             }
-            if ($realCount > 0 && ($n === null || $realCount === $n)) {
-                echo json_encode(['ok'=>true,'bot_id'=>(int)$bot_id,'count'=>$realCount,'kept'=>true]);
-                exit;
-            }
-        } catch (Exception $e) {}
+            echo json_encode(['ok'=>true,'bot_id'=>(int)$bot_id,'count_total'=>$n,'count_only'=>true]);
+        } catch (Exception $e) { http_response_code(500); echo json_encode(['ok'=>false,'error'=>$e->getMessage()]); }
+        exit;
     }
     try {
         $json = json_encode($sims);
-        $pdo->prepare("INSERT INTO bot_sims_status (bot_id, sims_json, updated_at) VALUES (:id, :json, NOW()) ON CONFLICT (bot_id) DO UPDATE SET sims_json=EXCLUDED.sims_json, updated_at=NOW()")
-            ->execute([':id'=>(int)$bot_id, ':json'=>$json]);
+        $pdo->prepare("INSERT INTO bot_sims_status (bot_id, sims_json, count_total, updated_at) VALUES (:id, :json, :n, NOW())
+                       ON CONFLICT (bot_id) DO UPDATE SET sims_json=EXCLUDED.sims_json, count_total=EXCLUDED.count_total, updated_at=NOW()")
+            ->execute([':id'=>(int)$bot_id, ':json'=>$json, ':n'=>count($sims)]);
         // also log counts for fleet badge
         $pdo->prepare("INSERT INTO bot_logs (bot_id, message, level) VALUES (:id, :msg, 'info')")
             ->execute([':id'=>(int)$bot_id, ':msg'=>'sims_status '.count($sims).' sims']);
@@ -67,12 +69,12 @@ if ($method === 'GET') {
     $bot_id = $_GET['bot_id'] ?? $_GET['id'] ?? null;
     if ($bot_id === null || $bot_id === '') { http_response_code(400); echo json_encode(['ok'=>false,'error'=>'bot_id required']); exit; }
     try {
-        $stmt = $pdo->prepare("SELECT sims_json, updated_at FROM bot_sims_status WHERE bot_id=:id");
+        $stmt = $pdo->prepare("SELECT sims_json, count_total, updated_at FROM bot_sims_status WHERE bot_id=:id");
         $stmt->execute([':id'=>(int)$bot_id]);
         $row = $stmt->fetch();
         if (!$row) { echo json_encode(['ok'=>true,'bot_id'=>(int)$bot_id,'sims'=>[],'updated_at'=>null]); exit; }
         $sims = $row['sims_json'] ? json_decode($row['sims_json'], true) : [];
-        echo json_encode(['ok'=>true,'bot_id'=>(int)$bot_id,'sims'=>$sims,'updated_at'=>$row['updated_at']]);
+        echo json_encode(['ok'=>true,'bot_id'=>(int)$bot_id,'sims'=>$sims,'count_total'=>$row['count_total'],'updated_at'=>$row['updated_at']]);
     } catch (Exception $e) { http_response_code(500); echo json_encode(['ok'=>false,'error'=>$e->getMessage()]); }
     exit;
 }
