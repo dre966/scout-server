@@ -66,10 +66,24 @@ if ($method === 'GET') {
                 foreach ($rows as $r) {
                     $sims = $r['sims_json'] ? json_decode($r['sims_json'], true) : null;
                     if (!is_array($sims)) $sims = [];
-                    $mx = 0;
-                    foreach ($sims as $s) { if (!empty($s['isMax'])) $mx++; }
-                    $simTot[(int)$r['bot_id']] = count($sims);
-                    $simMax[(int)$r['bot_id']] = $mx;
+                    $mx = 0; $real = 0; $countOnly = null;
+                    foreach ($sims as $s) {
+                        // count-only ping: [{"phone":"dashboard_count","status":"total:N"}] — not a SIM
+                        if ((($s['phone'] ?? '') === 'dashboard_count')) {
+                            if (preg_match('/total:(\d+)/', (string)($s['status'] ?? ''), $m)) $countOnly = (int)$m[1];
+                            continue;
+                        }
+                        $real++;
+                        if (!empty($s['isMax'])) $mx++;
+                    }
+                    $bid = (int)$r['bot_id'];
+                    if ($real > 0) {
+                        $simTot[$bid] = $real;
+                        $simMax[$bid] = $mx;
+                    } elseif ($countOnly !== null) {
+                        $simTot[$bid] = $countOnly;
+                        $simMax[$bid] = 0; // maxed unknown until the full list lands
+                    }
                 }
             } catch (Exception $e) {}
 

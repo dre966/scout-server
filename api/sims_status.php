@@ -32,6 +32,26 @@ if ($method === 'POST') {
     $sims = $data['sims'] ?? null;
     if ($bot_id === null) { http_response_code(400); echo json_encode(['ok'=>false,'error'=>'bot_id required']); exit; }
     if ($sims === null) { http_response_code(400); echo json_encode(['ok'=>false,'error'=>'sims array required']); exit; }
+
+    // Count-only ping ("dashboard_count") must not wipe a real SIM list
+    if (is_array($sims) && count($sims) === 1 && (($sims[0]['phone'] ?? '') === 'dashboard_count')) {
+        try {
+            $n = null;
+            if (preg_match('/total:(\d+)/', (string)($sims[0]['status'] ?? ''), $m)) $n = (int)$m[1];
+            $st = $pdo->prepare("SELECT sims_json FROM bot_sims_status WHERE bot_id=:id");
+            $st->execute([':id' => (int)$bot_id]);
+            $row = $st->fetch();
+            $existing = ($row && $row['sims_json']) ? json_decode($row['sims_json'], true) : [];
+            $realCount = 0;
+            if (is_array($existing)) {
+                foreach ($existing as $s) { if ((($s['phone'] ?? '') !== 'dashboard_count')) $realCount++; }
+            }
+            if ($realCount > 0 && ($n === null || $realCount === $n)) {
+                echo json_encode(['ok'=>true,'bot_id'=>(int)$bot_id,'count'=>$realCount,'kept'=>true]);
+                exit;
+            }
+        } catch (Exception $e) {}
+    }
     try {
         $json = json_encode($sims);
         $pdo->prepare("INSERT INTO bot_sims_status (bot_id, sims_json, updated_at) VALUES (:id, :json, NOW()) ON CONFLICT (bot_id) DO UPDATE SET sims_json=EXCLUDED.sims_json, updated_at=NOW()")
