@@ -117,7 +117,7 @@ tr.selected td{background:rgba(59,130,246,.08)}
 <script>
 const TOKEN = <?= json_encode($BOT_TOKEN) ?>;
 const HEADERS = {'Content-Type':'application/json','X-Bot-Token': TOKEN};
-let bots=[],selected=null,timer=null;
+let bots=[],selected=null,timer=null,prevSims={};
 function fmtAge(s){if(!s) return '<span class="badge badge-gray">never</span>';let t=s.replace(' ','T');if(!/[Z+\-]/.test(t.slice(10))) t+='Z';else if(/\+\d{2}$/.test(t)) t+=':00';const d=new Date(t);const diff=Math.floor((Date.now()-d.getTime())/1000);if(isNaN(diff)) return s;let cls='badge-red',dot='dot-red',label=diff+'s ago';if(diff<15){cls='badge-green';dot='dot-green';}else if(diff<60){cls='badge-yellow';dot='dot-yellow';}else if(diff<300){cls='badge-yellow';}if(diff<60) label=diff+'s ago';else if(diff<3600) label=Math.floor(diff/60)+'m ago';else label=Math.floor(diff/3600)+'h ago';return `<span class="dot ${dot}"></span><span class="badge ${cls}">${label}</span>`}
 function fmtTime(s){if(!s) return '—';try{let t=s.replace(' ','T');if(!/[Z+\-]/.test(t.slice(10))) t+='Z';else if(/\+\d{2}$/.test(t)) t+=':00';return new Date(t).toLocaleString();}catch{return s;}}
 function esc(s){return String(s??'').replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]))}
@@ -128,11 +128,19 @@ function render(){
   let filtered=bots; if(q) filtered=bots.filter(b=> String(b.id).includes(q) || (b.proxy_email||'').toLowerCase().includes(q) || (b.state||'').toLowerCase().includes(q));
   count.textContent=filtered.length; muted.style.display=filtered.length?'none':'block';
   tbody.innerHTML=filtered.map(b=>{
-    const total=b.sims_total??b.sims_count??0; const maxed=b.sims_maxed??0;
-    const pct=total>0?Math.min(100,Math.round((maxed/total)*100)):0;
+    const prev=prevSims[b.id];
+    const hasTotal=b.sims_total!==undefined&&b.sims_total!==null;
+    const hasMaxed=b.sims_maxed!==undefined&&b.sims_maxed!==null;
+    let total=hasTotal?b.sims_total:(prev&&prev.total!=null?prev.total:(b.sims_count??0));
+    let maxed=hasMaxed?b.sims_maxed:(prev&&prev.maxed!=null?prev.maxed:null);
+    let pct=0;
+    if(hasMaxed&&total>0) pct=Math.min(100,Math.round((maxed/total)*100));
+    else if(prev&&prev.pct!=null) pct=prev.pct;
+    if(hasMaxed) prevSims[b.id]={maxed:maxed,total:total,pct:pct};
+    const label=maxed===null?`${total} sims`:`${maxed}/${total} sims at max`;
     return `<tr class="${selected==b.id?'selected':''}" onclick="selectBot(${b.id})" style="cursor:pointer">
       <td><b>${esc(b.id)}</b><div class="small">${esc((b.container_id||'').slice(0,10))}</div></td>
-      <td><div><span class="badge ${b.state==='scout_dashboard'?'badge-green':'badge-gray'}">${esc((b.state||'—').slice(0,18))}</span></div><div class="progress" style="margin-top:4px"><div style="width:${pct}%;background:${pct>=100?'var(--danger)':pct>=50?'var(--warn)':'var(--ok)'}"></div></div><div class="small">${maxed}/${total} sims at max</div></td>
+      <td><div><span class="badge ${b.state==='scout_dashboard'?'badge-green':'badge-gray'}">${esc((b.state||'—').slice(0,18))}</span></div><div class="progress" style="margin-top:4px"><div style="width:${pct}%;background:${pct>=100?'var(--danger)':pct>=50?'var(--warn)':'var(--ok)'}"></div></div><div class="small">${label}</div></td>
       <td><div>${esc((b.proxy_email||'').split('@')[0])}</div><div class="small">${esc(b.poll_inbox||'')}</div></td>
       <td>${fmtAge(b.heartbeat_at)}<div class="small">${esc((b.current_url||'').slice(0,22))}</div></td>
       <td><div style="display:flex;gap:4px"><button class="btn" onclick="event.stopPropagation();sendWake(${b.id})">Wake</button><button class="btn" onclick="event.stopPropagation();sendSleep(${b.id})">Sleep</button><button class="btn btn-danger" onclick="event.stopPropagation();removeBot(${b.id})">✕</button><button class="btn" onclick="event.stopPropagation();selectBot(${b.id});sendCmd('RESTART')">↻</button></div></td>

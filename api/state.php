@@ -82,7 +82,7 @@ if ($method === 'GET') {
                         $simMax[$bid] = $mx;
                     } elseif ($countOnly !== null) {
                         $simTot[$bid] = $countOnly;
-                        $simMax[$bid] = 0; // maxed unknown until the full list lands
+                        // sims_maxed intentionally NOT set — maxed count unknown until the real list lands
                     }
                 }
             } catch (Exception $e) {}
