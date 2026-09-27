@@ -90,8 +90,8 @@ if ($method === 'GET') {
             foreach ($bots as &$b) {
                 $b['logs_count'] = $logsCnt[$b['id']] ?? 0;
                 $id = (int)$b['id'];
-                $b['sims_maxed'] = $simMax[$id] ?? 0;
-                $b['sims_total'] = array_key_exists($id, $simTot) ? $simTot[$id] : (int)($b['sims_count'] ?? 0);
+                $b['sims_maxed'] = array_key_exists($id, $simMax) ? $simMax[$id] : null; // null = unknown, UI keeps last known
+                $b['sims_total'] = array_key_exists($id, $simTot) ? $simTot[$id] : null; // null = unknown, UI keeps last known
             }
             unset($b);
 
