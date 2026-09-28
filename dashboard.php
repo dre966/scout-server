@@ -61,7 +61,7 @@ tr.selected td{background:rgba(59,130,246,.08)}
 <div id="tab-fleet" class="tab active">
 <div class="card">
 <div class="card-h"><h2>Fleet — <span id="botCount">0</span> bots</h2><div style="display:flex;gap:6px"><input id="filter" placeholder="filter id/email/state" oninput="render()" style="width:160px"><select id="autoPoll" onchange="resetTimer()"><option value="2000" selected>2s</option><option value="5000">5s</option><option value="0">off</option></select></div></div>
-<div class="table-wrap" style="max-height:58vh"><table><thead><tr><th>#</th><th>State / Progress</th><th>Proxy → Poll</th><th>HB / Uptime</th><th>URL</th><th>Actions</th></tr></thead><tbody id="tbody"></tbody></table></div>
+<div class="table-wrap" style="max-height:58vh"><table><thead><tr><th>#</th><th>State / Progress</th><th>Proxy → Poll</th><th>HB / Uptime</th><th>UP</th><th>URL</th><th>Actions</th></tr></thead><tbody id="tbody"></tbody></table></div>
 <div id="botsMuted" class="muted" style="display:none">No bots — check <code>SERVER_URL</code> + <code>BOT_ID</code></div>
 <div class="controls">
 <input id="customBotId" placeholder="bot_id" type="number" style="width:80px">
@@ -138,11 +138,14 @@ function render(){
     else if(prev&&prev.pct!=null) pct=prev.pct;
     if(hasMaxed) prevSims[b.id]={maxed:maxed,total:total,pct:pct};
     const label=maxed===null?`${total} sims`:`${maxed}/${total} sims at max`;
+    const upLabel=(b.up_balance!==undefined&&b.up_balance!==null)?(b.up_balance/1e6).toFixed(2)+' UP':'—';
     return `<tr class="${selected==b.id?'selected':''}" onclick="selectBot(${b.id})" style="cursor:pointer">
       <td><b>${esc(b.id)}</b><div class="small">${esc((b.container_id||'').slice(0,10))}</div></td>
       <td><div><span class="badge ${b.state==='scout_dashboard'?'badge-green':'badge-gray'}">${esc((b.state||'—').slice(0,18))}</span></div><div class="progress" style="margin-top:4px"><div style="width:${pct}%;background:${pct>=100?'var(--danger)':pct>=50?'var(--warn)':'var(--ok)'}"></div></div><div class="small">${label}</div></td>
       <td><div>${esc((b.proxy_email||'').split('@')[0])}</div><div class="small">${esc(b.poll_inbox||'')}</div></td>
-      <td>${fmtAge(b.heartbeat_at)}<div class="small">${esc((b.current_url||'').slice(0,22))}</div></td>
+      <td>${fmtAge(b.heartbeat_at)}</td>
+      <td><b>${upLabel}</b><div class="small">${b.up_balance_at?fmtAge(b.up_balance_at):''}</div></td>
+      <td><div class="small">${esc((b.current_url||'').slice(0,26))}</div></td>
       <td><div style="display:flex;gap:4px"><button class="btn" onclick="event.stopPropagation();sendWake(${b.id})">Wake</button><button class="btn" onclick="event.stopPropagation();sendSleep(${b.id})">Sleep</button><button class="btn btn-danger" onclick="event.stopPropagation();removeBot(${b.id})">✕</button><button class="btn" onclick="event.stopPropagation();selectBot(${b.id});sendCmd('RESTART')">↻</button></div></td>
     </tr>`;
   }).join('');

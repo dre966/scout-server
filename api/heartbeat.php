@@ -15,6 +15,11 @@ if ($provided !== $expected) {
 
 require_once __DIR__ . '/../config/db.php';
 
+try {
+    $pdo->exec("ALTER TABLE bots ADD COLUMN IF NOT EXISTS up_balance BIGINT");
+    $pdo->exec("ALTER TABLE bots ADD COLUMN IF NOT EXISTS up_balance_at TIMESTAMPTZ");
+} catch (Exception $e) {}
+
 $raw = file_get_contents('php://input');
 $data = json_decode($raw, true);
 if (!is_array($data)) $data = $_POST;
@@ -25,6 +30,7 @@ $sims_count  = $data['sims_count'] ?? null;
 $uptime      = $data['uptime'] ?? null;
 $current_url = $data['current_url'] ?? null;
 $message     = $data['message'] ?? null;
+$up_balance  = $data['up_balance'] ?? null;
 
 if ($bot_id === null) {
     http_response_code(400);
@@ -61,6 +67,11 @@ try {
             ':current_url' => $current_url,
             ':uptime' => $uptime
         ]);
+    }
+
+    if ($up_balance !== null) {
+        $ub = $pdo->prepare("UPDATE bots SET up_balance = :ub, up_balance_at = NOW(), updated_at = NOW() WHERE id = :id");
+        $ub->execute([':ub' => (int)$up_balance, ':id' => (int)$bot_id]);
     }
 
     $log = $pdo->prepare("INSERT INTO bot_logs (bot_id, state, sims_count, current_url, uptime, message, level) VALUES (:bot_id, :state, :sims_count, :current_url, :uptime, :message, 'info')");
