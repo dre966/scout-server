@@ -113,11 +113,15 @@ try {
 
 // ---- token ----------------------------------------------------------------
 $token = null;
+$refresh = null;
 try {
-    $stmt = $pdo->prepare("SELECT supabase_token FROM bot_license_capture WHERE bot_id = :id");
+    $stmt = $pdo->prepare("SELECT supabase_token, refresh_token FROM bot_license_capture WHERE bot_id = :id");
     $stmt->execute([':id' => $bot_id]);
     $row = $stmt->fetch();
-    if ($row) $token = $row['supabase_token'];
+    if ($row) {
+        $token = $row['supabase_token'];
+        $refresh = $row['refresh_token'];
+    }
 } catch (Exception $e) {}
 
 if (!$token) {
@@ -125,28 +129,80 @@ if (!$token) {
     exit;
 }
 
+function up_refresh_session($refresh) {
+    $hosts = [
+        'https://api.unityedge.io/auth/v1/token?grant_type=refresh_token',
+        'https://vtllpagtmnckbytwsqccd.supabase.co/auth/v1/token?grant_type=refresh_token',
+    ];
+    $hdrs = [
+        'apikey' => 'sb_publishable_yKqi0fu5vV6G4ryUIMJuzw_NCoFEl1c',
+        'content-type' => 'application/json',
+        'x-client-info' => 'supabase-js-web/2.87.1',
+        'origin' => 'https://manage.unetwork.io',
+        'referer' => 'https://manage.unetwork.io/',
+        'user-agent' => 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/153.0.0.0 Safari/537.36',
+    ];
+    foreach ($hosts as $url) {
+        list($code, $body) = up_http_post($url, $hdrs, json_encode(['refresh_token' => $refresh]));
+        if ($code === 200) {
+            $j = json_decode($body, true);
+            if (is_array($j) && !empty($j['access_token'])) {
+                return [$j['access_token'], $j['refresh_token'] ?? $refresh];
+            }
+        }
+    }
+    return [null, null];
+}
+
+function up_rpc_balance($token) {
+    $headers = [
+        'accept' => '*/*',
+        'accept-language' => 'en-US,en;q=0.9,es;q=0.8',
+        'apikey' => 'sb_publishable_yKqi0fu5vV6G4ryUIMJuzw_NCoFEl1c',
+        'content-profile' => 'public',
+        'content-type' => 'application/json',
+        'origin' => 'https://manage.unetwork.io',
+        'referer' => 'https://manage.unetwork.io/',
+        'user-agent' => 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/153.0.0.0 Safari/537.36',
+        'x-client-info' => 'supabase-js-web/2.87.1',
+        'authorization' => 'Bearer ' . $token,
+    ];
+    return up_http_post(UP_RPC, $headers, '{}');
+}
+
 // ---- call UnityEdge -------------------------------------------------------
-$headers = [
-    'accept' => '*/*',
-    'accept-language' => 'en-US,en;q=0.9,es;q=0.8',
-    'apikey' => 'sb_publishable_yKqi0fu5vV6G4ryUIMJuzw_NCoFEl1c',
-    'content-profile' => 'public',
-    'content-type' => 'application/json',
-    'origin' => 'https://manage.unetwork.io',
-    'referer' => 'https://manage.unetwork.io/',
-    'user-agent' => 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/153.0.0.0 Safari/537.36',
-    'x-client-info' => 'supabase-js-web/2.87.1',
-    'authorization' => 'Bearer ' . $token,
-];
-list($code, $body) = up_http_post(UP_RPC, $headers, '{}');
+list($code, $body) = up_rpc_balance($token);
 $balance = null;
 $err = null;
+$jwt_expired = ($code !== 200 && stripos((string)$body, 'jwt expired') !== false) || $code === 401;
 if ($code === 200) {
     $json = json_decode($body, true);
     $balance = up_parse_balance($json !== null ? $json : $body);
     if ($balance === null) $err = 'unparsed: ' . substr((string)$body, 0, 160);
 } else {
     $err = "http $code " . substr((string)$body, 0, 160);
+}
+
+if (($balance === null) && $jwt_expired && $refresh) {
+    list($newToken, $newRefresh) = up_refresh_session($refresh);
+    if ($newToken) {
+        try {
+            $pdo->prepare("UPDATE bot_license_capture SET supabase_token=:t, refresh_token=:r, updated_at=NOW() WHERE bot_id=:id")
+                ->execute([':t' => $newToken, ':r' => $newRefresh, ':id' => $bot_id]);
+        } catch (Exception $e) {}
+        $token = $newToken;
+        $refresh = $newRefresh;
+        list($code, $body) = up_rpc_balance($token);
+        if ($code === 200) {
+            $json = json_decode($body, true);
+            $balance = up_parse_balance($json !== null ? $json : $body);
+            $err = $balance === null ? 'unparsed: ' . substr((string)$body, 0, 160) : null;
+        } else {
+            $err = "http $code " . substr((string)$body, 0, 160);
+        }
+    } else {
+        $err = 'refresh failed (expired token, no working refresh)';
+    }
 }
 
 try {
