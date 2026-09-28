@@ -61,7 +61,7 @@ tr.selected td{background:rgba(59,130,246,.08)}
 <div id="tab-fleet" class="tab active">
 <div class="card">
 <div class="card-h"><h2>Fleet — <span id="botCount">0</span> bots</h2><div style="display:flex;gap:6px"><input id="filter" placeholder="filter id/email/state" oninput="render()" style="width:160px"><select id="autoPoll" onchange="resetTimer()"><option value="2000" selected>2s</option><option value="5000">5s</option><option value="0">off</option></select></div></div>
-<div class="table-wrap" style="max-height:58vh"><table><thead><tr><th>#</th><th>State / Progress</th><th>Proxy → Poll</th><th>HB / Uptime</th><th>URL</th><th>Actions</th></tr></thead><tbody id="tbody"></tbody></table></div>
+<div class="table-wrap" style="max-height:58vh"><table><thead><tr><th>#</th><th>State / Progress</th><th>Proxy → Poll</th><th>HB / Uptime</th><th>UP</th><th>URL</th><th>Actions</th></tr></thead><tbody id="tbody"></tbody></table></div>
 <div id="botsMuted" class="muted" style="display:none">No bots — check <code>SERVER_URL</code> + <code>BOT_ID</code></div>
 <div class="controls">
 <input id="customBotId" placeholder="bot_id" type="number" style="width:80px">
@@ -117,7 +117,7 @@ tr.selected td{background:rgba(59,130,246,.08)}
 <script>
 const TOKEN = <?= json_encode($BOT_TOKEN) ?>;
 const HEADERS = {'Content-Type':'application/json','X-Bot-Token': TOKEN};
-let bots=[],selected=null,timer=null,prevSims={};
+let bots=[],selected=null,timer=null,prevSims={},upBal={};
 function fmtAge(s){if(!s) return '<span class="badge badge-gray">never</span>';let t=s.replace(' ','T');if(!/[Z+\-]/.test(t.slice(10))) t+='Z';else if(/\+\d{2}$/.test(t)) t+=':00';const d=new Date(t);const diff=Math.floor((Date.now()-d.getTime())/1000);if(isNaN(diff)) return s;let cls='badge-red',dot='dot-red',label=diff+'s ago';if(diff<15){cls='badge-green';dot='dot-green';}else if(diff<60){cls='badge-yellow';dot='dot-yellow';}else if(diff<300){cls='badge-yellow';}if(diff<60) label=diff+'s ago';else if(diff<3600) label=Math.floor(diff/60)+'m ago';else label=Math.floor(diff/3600)+'h ago';return `<span class="dot ${dot}"></span><span class="badge ${cls}">${label}</span>`}
 function fmtTime(s){if(!s) return '—';try{let t=s.replace(' ','T');if(!/[Z+\-]/.test(t.slice(10))) t+='Z';else if(/\+\d{2}$/.test(t)) t+=':00';return new Date(t).toLocaleString();}catch{return s;}}
 function esc(s){return String(s??'').replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]))}
@@ -142,7 +142,9 @@ function render(){
       <td><b>${esc(b.id)}</b><div class="small">${esc((b.container_id||'').slice(0,10))}</div></td>
       <td><div><span class="badge ${b.state==='scout_dashboard'?'badge-green':'badge-gray'}">${esc((b.state||'—').slice(0,18))}</span></div><div class="progress" style="margin-top:4px"><div style="width:${pct}%;background:${pct>=100?'var(--danger)':pct>=50?'var(--warn)':'var(--ok)'}"></div></div><div class="small">${label}</div></td>
       <td><div>${esc((b.proxy_email||'').split('@')[0])}</div><div class="small">${esc(b.poll_inbox||'')}</div></td>
-      <td>${fmtAge(b.heartbeat_at)}<div class="small">${esc((b.current_url||'').slice(0,22))}</div></td>
+      <td>${fmtAge(b.heartbeat_at)}</td>
+      <td>${upBal[b.id]!=null?`<b>${upBal[b.id]} UP</b>`:'—'}</td>
+      <td><div class="small">${esc((b.current_url||'').slice(0,26))}</div></td>
       <td><div style="display:flex;gap:4px"><button class="btn" onclick="event.stopPropagation();sendWake(${b.id})">Wake</button><button class="btn" onclick="event.stopPropagation();sendSleep(${b.id})">Sleep</button><button class="btn btn-danger" onclick="event.stopPropagation();removeBot(${b.id})">✕</button><button class="btn" onclick="event.stopPropagation();selectBot(${b.id});sendCmd('RESTART')">↻</button></div></td>
     </tr>`;
   }).join('');
@@ -190,7 +192,8 @@ async function sendCmd(cmd){if(selected===null||selected===undefined||selected==
 async function sendCustomCommand(){const bot_id=document.getElementById('customBotId').value;let cmd=document.getElementById('cmdSelect').value;const argsRaw=document.getElementById('cmdArgs').value.trim();let args=null;if(argsRaw){try{args=JSON.parse(argsRaw);}catch{return alert('Invalid JSON');}}if(cmd==='LOGOUT'&&!args) args={wait:parseInt(document.getElementById('logoutWait').value||0)};if(!bot_id) return alert('bot_id required');await sendCommand(bot_id,cmd,args);}
 async function sendCommand(bot_id,cmd,args){try{const r=await fetch('api/command.php',{method:'POST',headers:HEADERS,body:JSON.stringify({bot_id:parseInt(bot_id),cmd,args})});const j=await r.json();if(j.ok) alert('Queued '+cmd+' for '+bot_id);else alert('Failed: '+(j.error||'unknown'));}catch(e){alert('Send failed: '+e.message);}}
 let fetchInFlight=false;async function fetchBotsSafe(){if(fetchInFlight) return;fetchInFlight=true;try{await fetchBots();}finally{fetchInFlight=false;}}function pollNow(){fetchBotsSafe();fetchTokensTable();}function resetTimer(){const v=parseInt(document.getElementById('autoPoll').value);if(timer) clearInterval(timer);if(v>0) timer=setInterval(fetchBotsSafe,v);}async function sendWake(bot_id){const id=bot_id??selected;if(id===null||id===undefined||id==='') return alert('Select bot');await sendCommand(id,'WAKE',{});}async function sendSleep(bot_id){const id=bot_id??selected;if(id===null||id===undefined||id==='') return alert('Select bot');const v=prompt('Sleep seconds for bot '+id+' (0-86400):','60');if(v===null) return;const wait=parseInt(v||0);if(isNaN(wait)||wait<0) return alert('Invalid');await sendCommand(id,'SLEEP',{wait});}async function removeBot(bot_id){const id=bot_id??selected;if(id===null||id===undefined||id==='') return alert('Select bot');if(!confirm('Remove Bot '+id+'?')) return;try{const r=await fetch('api/delete_bot.php',{method:'POST',headers:HEADERS,body:JSON.stringify({bot_id:parseInt(id)})});const j=await r.json();if(j.ok){if(selected==id) selected=null;fetchBotsSafe();fetchTokensTable();}else alert('Failed: '+(j.error||'unknown'));}catch(e){alert('Remove failed: '+e.message);}}
-setInterval(()=>{document.getElementById('clock').textContent=new Date().toLocaleTimeString();},1000);fetchBotsSafe();timer=setInterval(fetchBotsSafe,5000);
+async function fetchUpBalances(){if(!bots.length) return;try{const rs=await Promise.all(bots.map(b=>fetch('api/up_balance.php?bot_id='+encodeURIComponent(b.id),{headers:HEADERS}).then(r=>r.json()).catch(()=>null)));let changed=false;bots.forEach((b,i)=>{const j=rs[i];const v=(j&&j.ok&&j.up!=null)?j.up:null;if(upBal[b.id]!==v){upBal[b.id]=v;changed=true;}});if(changed||!upBal._init){upBal._init=true;render();}}catch(e){}}
+setInterval(()=>{document.getElementById('clock').textContent=new Date().toLocaleTimeString();},1000);fetchBotsSafe();timer=setInterval(fetchBotsSafe,5000);setTimeout(fetchUpBalances,1500);setInterval(fetchUpBalances,60000);
 let tokenPollTimer=null;let simsCache=[],packagesCache=[];
 function maskToken(t){if(!t) return '<span class="badge badge-gray">—</span>';t=String(t);if(t.length<10) return esc(t);return esc(t.slice(0,6))+'…'+esc(t.slice(-4))+' <span style="color:var(--ok)">●</span>';}
 function fmtTime(s){if(!s) return '—';try{let t=s.replace(' ','T');if(!/[Z+\-]/.test(t.slice(10))) t+='Z';else if(/\+\d{2}$/.test(t)) t+=':00';return new Date(t).toLocaleString();}catch{return s;}}
