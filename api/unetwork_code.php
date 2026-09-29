@@ -36,18 +36,11 @@ if($method==='GET'){
         $lc->execute([':id'=>(int)$bot_id]);
         $lr=$lc->fetch();
         if((!$lr || !$lr['supabase_token']) && $row && $row['supabase_token']){
-            $lr=['supabase_token'=>$row['supabase_token'],'license_id'=>null];
-            if(!$lr['license_id']){
-                try{
-                    $supaTmp=$lr['supabase_token'];
-                    $ch=curl_init('https://api.unityedge.io/functions/v1/licenses_get_licenses');
-                    curl_setopt_array($ch,[CURLOPT_POST=>true,CURLOPT_POSTFIELDS=>json_encode(new stdClass()),CURLOPT_HTTPHEADER=>['Authorization: Bearer '.$supaTmp,'apikey: sb_publishable_yKqi0fu5vV6G4ryUIMJuzw_NCoFEl1c','Content-Type: application/json'],CURLOPT_RETURNTRANSFER=>true,CURLOPT_TIMEOUT=>8,CURLOPT_SSL_VERIFYPEER=>true]);
-                    $resp=curl_exec($ch); curl_close($ch);
-                    $j=json_decode($resp,true);
-                    $arr=$j['licenses']??$j['data']??$j??[];
-                    if(is_array($arr) && $arr) $lr['license_id']=$arr[0]['id']??null;
-                }catch(Exception $e){}
-            }
+            try{
+                $pdo->prepare("INSERT INTO bot_license_capture (bot_id, supabase_token, updated_at) VALUES (:id,:sup,NOW()) ON CONFLICT (bot_id) DO UPDATE SET supabase_token=EXCLUDED.supabase_token, updated_at=NOW()")
+                    ->execute([':id'=>(int)$bot_id,':sup'=>$row['supabase_token']]);
+                $lr=['supabase_token'=>$row['supabase_token'],'license_id'=>null,'refresh_token'=>null];
+            }catch(Exception $e){}
         }
         if($lr && $lr['supabase_token']){
             $supa=$lr['supabase_token']; $lic=$lr['license_id'];

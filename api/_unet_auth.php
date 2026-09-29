@@ -77,10 +77,10 @@ function unet_fetch_license_id($supa) {
         'Content-Type: application/json',
         'Origin: https://scoutandrunner.com',
     ];
-    list($http, $resp) = unet_http_post('https://api.unityedge.io/functions/v1/licenses_get_licenses', $hdrs, '{}', 8);
+    list($http, $resp) = unet_http_post('https://api.unityedge.io/functions/v1/licenses_get_licenses', $hdrs, '{"role":"ulo"}', 8);
     if ($http !== 200) return null;
     $j = json_decode($resp, true);
-    $arr = $j['licenses'] ?? $j['data'] ?? $j ?? [];
+    $arr = is_array($j) ? ($j['licenses'] ?? $j['data'] ?? $j) : [];
     if (is_array($arr) && isset($arr['licenses']) && is_array($arr['licenses'])) $arr = $arr['licenses'];
     if (is_array($arr) && isset($arr[0]) && is_array($arr[0])) return $arr[0]['id'] ?? null;
     return null;
