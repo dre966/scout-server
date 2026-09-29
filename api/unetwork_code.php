@@ -69,9 +69,6 @@ if($method==='GET'){
                 http_response_code(404); echo json_encode(['ok'=>false,'error'=>'no code for bot and fresh create failed'.($note?' ('.$note.')':''),'http'=>$http,'body'=>substr((string)$resp,0,300)]); exit;
             }
         } else if(!$row){
-                http_response_code(404); echo json_encode(['ok'=>false,'error'=>'no code for bot and fresh create failed','http'=>$http,'body'=>substr($resp??'',0,300)]); exit;
-            }
-        } else if(!$row){
             http_response_code(404); echo json_encode(['ok'=>false,'error'=>'no capture for bot — bot must hit license_select to store supabase+license']); exit;
         }
     }
