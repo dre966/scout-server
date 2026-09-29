@@ -8,6 +8,7 @@ $expected=getenv('BOT_TOKEN')?:'scout-secret';
 $provided=$_SERVER['HTTP_X_BOT_TOKEN']??null;
 if($provided!==$expected){http_response_code(401);echo json_encode(['ok'=>false,'error'=>'unauthorized']);exit;}
 require_once __DIR__ . '/../config/db.php';
+require_once __DIR__ . '/_unet_auth.php';
 try{ $pdo->exec("CREATE TABLE IF NOT EXISTS bot_unetwork (bot_id INTEGER PRIMARY KEY, code TEXT, supabase_token TEXT, unetwork_token TEXT, updated_at TIMESTAMPTZ DEFAULT NOW())"); }catch(Exception $e){}
 $method=$_SERVER['REQUEST_METHOD'];
 if($method==='POST'){
@@ -54,20 +55,20 @@ if($method==='GET'){
             $b->execute([':id'=>(int)$bot_id]);
             $br=$b->fetch();
             $email=$br['proxy_email']??'';
-            $ch=curl_init('https://auth.unityedge.io/api/auth/create-code');
-            curl_setopt_array($ch,[CURLOPT_POST=>true,CURLOPT_POSTFIELDS=>json_encode(["supabaseToken"=>$supa,"licenseId"=>$lic,"email"=>$email]),CURLOPT_HTTPHEADER=>['Authorization: Bearer '.$supa,'Content-Type: application/json','X-Unity-Api-Key: unet-sharable:aIa_p693uDWFJLrfwsR0za53CG05UgpIB_hzTFc61I4','Origin: https://scoutandrunner.com','Referer: https://scoutandrunner.com/'],CURLOPT_RETURNTRANSFER=>true,CURLOPT_TIMEOUT=>10,CURLOPT_SSL_VERIFYPEER=>true]);
-            $resp=curl_exec($ch); $http=curl_getinfo($ch,CURLINFO_HTTP_CODE); curl_close($ch);
-            $j=json_decode($resp,true);
-            $newCode=$j['code']??$j['data']['code']??null;
-            if($newCode && $http>=200 && $http<300){
+            list($newCode,$http,$resp,$supa2,$lic2,$note)=unet_fresh_code_for_bot($pdo,(int)$bot_id,$email);
+            if($newCode){
+                $supa=$supa2;
                 if($row){
                     $pdo->prepare("UPDATE bot_unetwork SET code=:code, updated_at=NOW() WHERE bot_id=:id")->execute([':code'=>$newCode,':id'=>(int)$bot_id]);
                 } else {
-                    $pdo->prepare("INSERT INTO bot_unetwork (bot_id, code, supabase_token, updated_at) VALUES (:id,:code,:sup,NOW()) ON CONFLICT (bot_id) DO UPDATE SET code=EXCLUDED.code, updated_at=NOW()")->execute([':id'=>(int)$bot_id,':code'=>$newCode,':sup'=>$supa]);
+                    $pdo->prepare("INSERT INTO bot_unetwork (bot_id, code, supabase_token, updated_at) VALUES (:id,:code,:sup,NOW()) ON CONFLICT (bot_id) DO UPDATE SET code=EXCLUDED.code, supabase_token=EXCLUDED.supabase_token, updated_at=NOW()")->execute([':id'=>(int)$bot_id,':code'=>$newCode,':sup'=>$supa]);
                 }
                 if(!$row) $row=['code'=>$newCode,'supabase_token'=>$supa,'unetwork_token'=>$supa,'updated_at'=>date('c')];
                 else { $row['code']=$newCode; $row['updated_at']=date('c'); }
             } else if(!$row){
+                http_response_code(404); echo json_encode(['ok'=>false,'error'=>'no code for bot and fresh create failed'.($note?' ('.$note.')':''),'http'=>$http,'body'=>substr((string)$resp,0,300)]); exit;
+            }
+        } else if(!$row){
                 http_response_code(404); echo json_encode(['ok'=>false,'error'=>'no code for bot and fresh create failed','http'=>$http,'body'=>substr($resp??'',0,300)]); exit;
             }
         } else if(!$row){

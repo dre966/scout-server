@@ -17,12 +17,12 @@ try{
     $br=$b->fetch();
     $email=$br['proxy_email']??'';
 
-    list($code,$http,$resp,$supa,$lic)=unet_fresh_code_for_bot($pdo,(int)$bot_id,$email);
+    list($code,$http,$resp,$supa,$lic,$note)=unet_fresh_code_for_bot($pdo,(int)$bot_id,$email);
     if(!$code){
         if($resp==='no capture'){
             http_response_code(404); echo json_encode(['ok'=>false,'error'=>'no supabase+license capture for bot — hit license_select first']); exit;
         }
-        http_response_code(502); echo json_encode(['ok'=>false,'error'=>'create-code failed','http'=>$http,'body'=>substr((string)$resp,0,400)]);
+        http_response_code(502); echo json_encode(['ok'=>false,'error'=>'create-code failed'.($note?' ('.$note.')':''),'http'=>$http,'body'=>substr((string)$resp,0,400)]);
         exit;
     }
     // also update bot_unetwork for history

@@ -76,24 +76,32 @@ function unet_fresh_code_for_bot($pdo, $bot_id, $email) {
     $lc->execute([':id' => (int)$bot_id]);
     $lr = $lc->fetch();
     if (!$lr || !$lr['supabase_token'] || !$lr['license_id']) {
-        return [null, 0, 'no capture'];
+        return [null, 0, 'no capture', null, null, null];
     }
     $supa = $lr['supabase_token'];
     $lic = $lr['license_id'];
     $refresh = $lr['refresh_token'] ?? null;
 
     list($code, $http, $resp) = unet_create_code($supa, $lic, $email);
+    $note = null;
 
-    if ((!$code || unet_resp_expired($resp, $http)) && $refresh) {
-        list($newTok, $newRef) = unet_refresh_session($refresh);
-        if ($newTok) {
-            try {
-                $pdo->prepare("UPDATE bot_license_capture SET supabase_token=:t, refresh_token=:r, updated_at=NOW() WHERE bot_id=:id")
-                    ->execute([':t' => $newTok, ':r' => $newRef, ':id' => (int)$bot_id]);
-            } catch (Exception $e) {}
-            $supa = $newTok;
-            list($code, $http, $resp) = unet_create_code($supa, $lic, $email);
+    if ((!$code || unet_resp_expired($resp, $http))) {
+        if (!$refresh) {
+            $note = 'no refresh_token captured';
+        } else {
+            list($newTok, $newRef) = unet_refresh_session($refresh);
+            if ($newTok) {
+                try {
+                    $pdo->prepare("UPDATE bot_license_capture SET supabase_token=:t, refresh_token=:r, updated_at=NOW() WHERE bot_id=:id")
+                        ->execute([':t' => $newTok, ':r' => $newRef, ':id' => (int)$bot_id]);
+                } catch (Exception $e) {}
+                $supa = $newTok;
+                $note = 'refreshed ok';
+                list($code, $http, $resp) = unet_create_code($supa, $lic, $email);
+            } else {
+                $note = 'refresh_token rejected';
+            }
         }
     }
-    return [$code, $http, $resp, $supa, $lic];
+    return [$code, $http, $resp, $supa, $lic, $note];
 }

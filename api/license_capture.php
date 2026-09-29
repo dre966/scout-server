@@ -43,11 +43,11 @@ if($method==='POST'){
 if($method==='GET'){
     $bot_id=$_GET['bot_id']??$_GET['id']??null;
     if($bot_id===null||$bot_id===''){http_response_code(400);echo json_encode(['ok'=>false,'error'=>'bot_id required']);exit;}
-    $stmt=$pdo->prepare("SELECT supabase_token, license_id, updated_at FROM bot_license_capture WHERE bot_id=:id");
+    $stmt=$pdo->prepare("SELECT supabase_token, license_id, refresh_token, updated_at FROM bot_license_capture WHERE bot_id=:id");
     $stmt->execute([':id'=>(int)$bot_id]);
     $row=$stmt->fetch();
     if(!$row){http_response_code(404);echo json_encode(['ok'=>false,'error'=>'no capture for bot']);exit;}
-    echo json_encode(['ok'=>true,'bot_id'=>(int)$bot_id,'supabaseToken'=>$row['supabase_token'],'licenseId'=>$row['license_id'],'updated_at'=>$row['updated_at']]);
+    echo json_encode(['ok'=>true,'bot_id'=>(int)$bot_id,'supabaseToken'=>$row['supabase_token'],'licenseId'=>$row['license_id'],'hasRefreshToken'=>(bool)$row['refresh_token'],'updated_at'=>$row['updated_at']]);
     exit;
 }
 http_response_code(405); echo json_encode(['ok'=>false,'error'=>'method not allowed']);
