@@ -29,8 +29,8 @@ if($method==='POST'){
     $supa=$data['supabaseToken']??$data['supabase_token']??null;
     $lic=$data['licenseId']??$data['license_id']??null;
     $rawJson=$data['rawJson']??$data['raw_json']??null;
-    $refresh=null;
-    if($rawJson){
+    $refresh=$data['refreshToken']??$data['refresh_token']??null;
+    if(!$refresh && $rawJson){
         $rj=json_decode($rawJson,true);
         if(is_array($rj)) $refresh=up_find_refresh($rj);
     }

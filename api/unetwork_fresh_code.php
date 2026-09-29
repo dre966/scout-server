@@ -8,28 +8,21 @@ $expected=getenv('BOT_TOKEN')?:'scout-secret';
 $provided=$_SERVER['HTTP_X_BOT_TOKEN']??null;
 if($provided!==$expected){http_response_code(401);echo json_encode(['ok'=>false,'error'=>'unauthorized']);exit;}
 require_once __DIR__ . '/../config/db.php';
+require_once __DIR__ . '/_unet_auth.php';
 $bot_id=$_GET['bot_id']??$_POST['bot_id']??null;
 if($bot_id===null||$bot_id===''){http_response_code(400);echo json_encode(['ok'=>false,'error'=>'bot_id required']);exit;}
 try{
-    $lc=$pdo->prepare("SELECT supabase_token, license_id, updated_at FROM bot_license_capture WHERE bot_id=:id");
-    $lc->execute([':id'=>(int)$bot_id]);
-    $lr=$lc->fetch();
-    if(!$lr || !$lr['supabase_token'] || !$lr['license_id']){
-        http_response_code(404); echo json_encode(['ok'=>false,'error'=>'no supabase+license capture for bot — hit license_select first']);
-        exit;
-    }
-    $supa=$lr['supabase_token']; $lic=$lr['license_id'];
     $b=$pdo->prepare("SELECT proxy_email FROM bots WHERE id=:id");
     $b->execute([':id'=>(int)$bot_id]);
     $br=$b->fetch();
     $email=$br['proxy_email']??'';
-    $ch=curl_init('https://auth.unityedge.io/api/auth/create-code');
-    curl_setopt_array($ch,[CURLOPT_POST=>true,CURLOPT_POSTFIELDS=>json_encode(["supabaseToken"=>$supa,"licenseId"=>$lic,"email"=>$email]),CURLOPT_HTTPHEADER=>['Authorization: Bearer '.$supa,'Content-Type: application/json','X-Unity-Api-Key: unet-sharable:aIa_p693uDWFJLrfwsR0za53CG05UgpIB_hzTFc61I4','Origin: https://scoutandrunner.com','Referer: https://scoutandrunner.com/'],CURLOPT_RETURNTRANSFER=>true,CURLOPT_TIMEOUT=>10,CURLOPT_SSL_VERIFYPEER=>true]);
-    $resp=curl_exec($ch); $http=curl_getinfo($ch,CURLINFO_HTTP_CODE); curl_close($ch);
-    $j=json_decode($resp,true);
-    $code=$j['code']??$j['data']['code']??null;
-    if(!$code || $http<200 || $http>=300){
-        http_response_code(502); echo json_encode(['ok'=>false,'error'=>'create-code failed','http'=>$http,'body'=>substr($resp??'',0,400)]);
+
+    list($code,$http,$resp,$supa,$lic)=unet_fresh_code_for_bot($pdo,(int)$bot_id,$email);
+    if(!$code){
+        if($resp==='no capture'){
+            http_response_code(404); echo json_encode(['ok'=>false,'error'=>'no supabase+license capture for bot — hit license_select first']); exit;
+        }
+        http_response_code(502); echo json_encode(['ok'=>false,'error'=>'create-code failed','http'=>$http,'body'=>substr((string)$resp,0,400)]);
         exit;
     }
     // also update bot_unetwork for history
