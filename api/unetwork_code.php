@@ -49,7 +49,7 @@ if($method==='GET'){
                 }catch(Exception $e){}
             }
         }
-        if($lr && $lr['supabase_token'] && $lr['license_id']){
+        if($lr && $lr['supabase_token']){
             $supa=$lr['supabase_token']; $lic=$lr['license_id'];
             $b=$pdo->prepare("SELECT proxy_email FROM bots WHERE id=:id");
             $b->execute([':id'=>(int)$bot_id]);

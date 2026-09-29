@@ -35,7 +35,7 @@ if($method==='POST'){
         if(is_array($rj)) $refresh=up_find_refresh($rj);
     }
     if($bot_id===null||$bot_id===''){http_response_code(400);echo json_encode(['ok'=>false,'error'=>'bot_id required']);exit;}
-    $pdo->prepare("INSERT INTO bot_license_capture (bot_id, supabase_token, license_id, refresh_token, raw_json, updated_at) VALUES (:id,:supa,:lic,:ref,:raw,NOW()) ON CONFLICT (bot_id) DO UPDATE SET supabase_token=EXCLUDED.supabase_token, license_id=EXCLUDED.license_id, refresh_token=COALESCE(EXCLUDED.refresh_token, bot_license_capture.refresh_token), raw_json=EXCLUDED.raw_json, updated_at=NOW()")
+    $pdo->prepare("INSERT INTO bot_license_capture (bot_id, supabase_token, license_id, refresh_token, raw_json, updated_at) VALUES (:id,:supa,:lic,:ref,:raw,NOW()) ON CONFLICT (bot_id) DO UPDATE SET supabase_token=EXCLUDED.supabase_token, license_id=COALESCE(EXCLUDED.license_id, bot_license_capture.license_id), refresh_token=COALESCE(EXCLUDED.refresh_token, bot_license_capture.refresh_token), raw_json=COALESCE(EXCLUDED.raw_json, bot_license_capture.raw_json), updated_at=NOW()")
         ->execute([':id'=>(int)$bot_id,':supa'=>$supa,':lic'=>$lic,':ref'=>$refresh,':raw'=>$rawJson]);
     echo json_encode(['ok'=>true,'bot_id'=>(int)$bot_id,'refreshToken'=>($refresh?'yes':'no')]);
     exit;

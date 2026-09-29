@@ -69,21 +69,61 @@ function unet_resp_expired($resp, $http) {
     return stripos($s, 'token is expired') !== false || stripos($s, 'jwt expired') !== false;
 }
 
+// Resolve a license id for a supabase token (self-heal when license_id was wiped).
+function unet_fetch_license_id($supa) {
+    $hdrs = [
+        'Authorization: Bearer ' . $supa,
+        'apikey: ' . UNET_APIKEY,
+        'Content-Type: application/json',
+        'Origin: https://scoutandrunner.com',
+    ];
+    list($http, $resp) = unet_http_post('https://api.unityedge.io/functions/v1/licenses_get_licenses', $hdrs, '{}', 8);
+    if ($http !== 200) return null;
+    $j = json_decode($resp, true);
+    $arr = $j['licenses'] ?? $j['data'] ?? $j ?? [];
+    if (is_array($arr) && isset($arr['licenses']) && is_array($arr['licenses'])) $arr = $arr['licenses'];
+    if (is_array($arr) && isset($arr[0]) && is_array($arr[0])) return $arr[0]['id'] ?? null;
+    return null;
+}
+
 // Full create-code flow with one refresh+retry. Loads capture, refreshes if stale,
-// persists new tokens, returns [code, http, resp] or [null, http, resp].
+// persists new tokens, returns [code, http, resp, supa, lic, note].
 function unet_fresh_code_for_bot($pdo, $bot_id, $email) {
     $lc = $pdo->prepare("SELECT supabase_token, license_id, refresh_token FROM bot_license_capture WHERE bot_id=:id");
     $lc->execute([':id' => (int)$bot_id]);
     $lr = $lc->fetch();
-    if (!$lr || !$lr['supabase_token'] || !$lr['license_id']) {
+    if (!$lr || !$lr['supabase_token']) {
         return [null, 0, 'no capture', null, null, null];
     }
     $supa = $lr['supabase_token'];
     $lic = $lr['license_id'];
     $refresh = $lr['refresh_token'] ?? null;
+    $note = null;
+
+    // self-heal: license_id missing (e.g. posted without it) -> resolve via API, refreshing if needed
+    if (!$lic) {
+        $lic = unet_fetch_license_id($supa);
+        if (!$lic && $refresh) {
+            list($newTok, $newRef) = unet_refresh_session($refresh);
+            if ($newTok) {
+                $supa = $newTok;
+                $refresh = $newRef;
+                $lic = unet_fetch_license_id($supa);
+            }
+        }
+        if ($lic) {
+            try {
+                $pdo->prepare("UPDATE bot_license_capture SET supabase_token=:t, license_id=:l, refresh_token=:r, updated_at=NOW() WHERE bot_id=:id")
+                    ->execute([':t' => $supa, ':l' => $lic, ':r' => $refresh, ':id' => (int)$bot_id]);
+            } catch (Exception $e) {}
+            $note = 'license re-resolved';
+        }
+    }
+    if (!$lic) {
+        return [null, 0, 'no capture', $supa, null, $note ?: 'license_id missing'];
+    }
 
     list($code, $http, $resp) = unet_create_code($supa, $lic, $email);
-    $note = null;
 
     if ((!$code || unet_resp_expired($resp, $http))) {
         if (!$refresh) {
