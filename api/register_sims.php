@@ -90,6 +90,14 @@ try {
 
     ensure_runner($token);
 
+    // when browse-packages returns nothing, every mapping comes through without a packageId —
+    // fall back to the default category instead of skipping everything
+    $DEFAULT_CATEGORY_ID = '49546914-70f3-4d94-80dd-49a7e80425f3';
+    $anyPackage = false;
+    foreach ($mappings as $m) {
+        if (!empty($m['packageId'] ?? $m['package_id'] ?? $m['categoryId'] ?? null)) { $anyPackage = true; break; }
+    }
+
     $results = [];
     foreach ($mappings as $m) {
         $simId = $m['simId'] ?? $m['sim_id'] ?? $m['id'] ?? null;
@@ -97,6 +105,11 @@ try {
         if (!$simId) {
             $results[] = ['simId' => null, 'skipped' => true, 'error' => 'missing simId'];
             continue;
+        }
+        $defaulted = false;
+        if (!$packageId && !$anyPackage) {
+            $packageId = $DEFAULT_CATEGORY_ID;
+            $defaulted = true;
         }
         if (!$packageId) {
             $results[] = ['simId' => $simId, 'skipped' => true, 'packageId' => null, 'msg' => 'empty package - skipped'];
@@ -107,12 +120,12 @@ try {
         $bodyPreview = $resp ? substr($resp, 0, 600) : $err;
         $j = $resp ? json_decode($resp, true) : null;
         if ($http >= 200 && $http < 300) {
-            $results[] = ['simId' => $simId, 'packageId' => $packageId, 'ok' => true, 'http' => $http, 'response' => $j ?? $bodyPreview];
+            $results[] = ['simId' => $simId, 'packageId' => $packageId, 'ok' => true, 'http' => $http, 'defaulted' => $defaulted, 'response' => $j ?? $bodyPreview];
             // log success
             $log = $pdo->prepare("INSERT INTO bot_logs (bot_id, message, level) VALUES (:bot_id, :msg, 'info')");
-            $log->execute([':bot_id' => (int)$bot_id, ':msg' => "register sim {$simId} -> {$packageId} ok http={$http}"]);
+            $log->execute([':bot_id' => (int)$bot_id, ':msg' => "register sim {$simId} -> {$packageId}" . ($defaulted ? " (default category)" : "") . " ok http={$http}"]);
         } else {
-            $results[] = ['simId' => $simId, 'packageId' => $packageId, 'ok' => false, 'http' => $http, 'error' => $bodyPreview];
+            $results[] = ['simId' => $simId, 'packageId' => $packageId, 'ok' => false, 'http' => $http, 'defaulted' => $defaulted, 'error' => $bodyPreview];
             $log = $pdo->prepare("INSERT INTO bot_logs (bot_id, message, level) VALUES (:bot_id, :msg, 'warn')");
             $log->execute([':bot_id' => (int)$bot_id, ':msg' => "register sim {$simId} -> {$packageId} fail http={$http} body=" . substr($bodyPreview,0,200)]);
         }
