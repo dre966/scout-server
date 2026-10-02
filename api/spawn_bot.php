@@ -14,8 +14,41 @@ if ($provided !== $expected) {
 }
 
 if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
-    http_response_code(405);
-    echo json_encode(['ok' => false, 'error' => 'POST only']);
+    // GET -> routing list (BOT_ID -> proxy) merged with live heartbeat status
+    $routingFile = getenv('ROUTING_JSON') ?: '/var/www/scout-bot/data/routing.json';
+    if (!is_file($routingFile)) {
+        http_response_code(500);
+        echo json_encode(['ok' => false, 'error' => 'routing.json not found at ' . $routingFile]);
+        exit;
+    }
+    $routing = json_decode((string)file_get_contents($routingFile), true);
+    if (!is_array($routing)) {
+        http_response_code(500);
+        echo json_encode(['ok' => false, 'error' => 'routing.json unreadable']);
+        exit;
+    }
+    $live = [];
+    try {
+        require_once __DIR__ . '/../config/db.php';
+        foreach ($pdo->query("SELECT id, state, heartbeat_at FROM bots") as $row) {
+            $live[(int)$row['id']] = $row;
+        }
+    } catch (Exception $e) { /* db down -> routing only */ }
+    $out = [];
+    foreach ($routing as $id => $r) {
+        $hb = $live[$id]['heartbeat_at'] ?? null;
+        $fresh = $hb !== null && (time() - strtotime($hb)) < 90;
+        $out[] = [
+            'id' => (int)$id,
+            'proxy' => $r['proxy'] ?? '',
+            'poll_inbox' => $r['poll_inbox'] ?? '',
+            'type' => $r['type'] ?? '',
+            'state' => $live[$id]['state'] ?? null,
+            'heartbeat_at' => $hb,
+            'running' => $fresh,
+        ];
+    }
+    echo json_encode(['ok' => true, 'spawn_sh' => is_file('/var/www/scout-bot/spawn.sh'), 'bots' => $out]);
     exit;
 }
 

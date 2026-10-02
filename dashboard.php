@@ -60,7 +60,7 @@ tr.selected td{background:rgba(59,130,246,.08)}
 
 <div id="tab-fleet" class="tab active">
 <div class="card">
-<div class="card-h"><h2>Fleet — <span id="botCount">0</span> bots</h2><div style="display:flex;gap:6px"><input id="filter" placeholder="filter id/email/state" oninput="render()" style="width:160px"><select id="autoPoll" onchange="resetTimer()"><option value="2000" selected>2s</option><option value="5000">5s</option><option value="0">off</option></select></div></div>
+<div class="card-h"><h2>Fleet — <span id="botCount">0</span> bots <span id="up24h" style="text-transform:none;font-weight:700;color:var(--ok)">—</span></h2><div style="display:flex;gap:6px;flex-wrap:wrap;justify-content:flex-end"><input id="filter" placeholder="filter id/email/state" oninput="render()" style="width:160px"><select id="fleetSort" onchange="render()" title="Sort by"><option value="hb" selected>Last pinged</option><option value="id">ID</option></select><select id="autoPoll" onchange="resetTimer()"><option value="2000" selected>2s</option><option value="5000">5s</option><option value="0">off</option></select></div></div>
 <div class="table-wrap" style="max-height:58vh"><table><thead><tr><th>#</th><th>State / Progress</th><th>Proxy → Poll</th><th>HB / Uptime</th><th>UP</th><th>URL</th><th>Actions</th></tr></thead><tbody id="tbody"></tbody></table></div>
 <div id="botsMuted" class="muted" style="display:none">No bots — check <code>SERVER_URL</code> + <code>BOT_ID</code></div>
 <div class="controls">
@@ -86,14 +86,15 @@ tr.selected td{background:rgba(59,130,246,.08)}
 
 <div id="tab-devices" class="tab">
 <div class="card">
-<div class="card-h"><h2>Devices & SIMs</h2><button class="btn btn-primary" id="btnLoadTokens" onclick="loadDevicesAndTokens()">Load tokens</button></div>
+<div class="card-h"><h2>Devices & SIMs</h2><div style="display:flex;gap:6px;align-items:center"><select id="deviceSort" onchange="renderTokensTable()" title="Sort by"><option value="hb" selected>Last pinged</option><option value="id">ID</option></select><button class="btn btn-primary" id="btnLoadTokens" onclick="loadDevicesAndTokens()">Load tokens</button></div></div>
 <div class="table-wrap" style="max-height:30vh"><table><thead><tr><th><input type="checkbox" id="chkAll" onchange="toggleAll(this.checked)"></th><th>Bot</th><th>Proxy → Poll</th><th>Token</th><th>State / HB</th></tr></thead><tbody id="tokenTbody"></tbody></table></div>
-<div id="tokenStatus" class="muted">No tokens yet — heartbeat → Load.</div>
+<div id="tokenStatus" class="muted">Tokens auto-sync from bots every few seconds — Load only forces a refresh.</div>
 <div class="controls" id="postTokenControls" style="display:none">
 <button class="btn btn-primary" onclick="goToSite()">↗ Go to site</button>
 <button class="btn btn-primary" onclick="openCallStatus()">Call Status</button>
 <button class="btn btn-secondary" onclick="copyLicenseCapture()">Copy Supabase + License</button>
 <button class="btn btn-danger" onclick="deleteAccountNow()">Delete Account</button>
+<button class="btn btn-danger" onclick="destroySelected()">Destroy</button>
 <button class="btn btn-primary" onclick="openSimRegisterFlow()">Register SIMs</button>
 </div>
 <div id="simMappingArea" style="display:none;border-top:1px solid var(--line);padding:10px">
@@ -112,6 +113,7 @@ tr.selected td{background:rgba(59,130,246,.08)}
 
 <div id="callStatusOverlay" class="overlay" onclick="if(event.target===this) closeCallStatus()"><div class="sheet"><div class="sheet-h">Call Status — Bot <span id="csBotId">—</span> <span id="csUpdated" class="muted"></span> <button class="btn" onclick="closeCallStatus()" style="margin-left:auto">✕</button></div><div class="sheet-b" id="csBody" style="max-height:62vh;overflow:auto"></div><div style="display:flex;gap:8px;justify-content:flex-end;padding:10px;border-top:1px solid var(--line)"><button class="btn" onclick="closeCallStatus()">Close</button><button class="btn btn-primary" onclick="refreshCallStatus()">Refresh</button></div></div></div>
 <div id="deleteOverlay" class="overlay" onclick="if(event.target===this) closeDeleteModal()"><div class="sheet"><div class="sheet-h">Delete Account — Bot <span id="deleteBotId">—</span></div><div class="sheet-b"><div class="muted">DELETE https://scoutandrunner.com/api/auth/delete-account {"confirmation":"DELETE_MY_ACCOUNT"}</div><input id="deleteConfirm" placeholder="DELETE_MY_ACCOUNT"><div id="deleteResult" class="muted" style="display:none"></div></div><div style="display:flex;gap:8px;justify-content:flex-end;padding:10px;border-top:1px solid var(--line)"><button class="btn" onclick="closeDeleteModal()">Cancel</button><button class="btn btn-danger" id="btnDeleteConfirm" onclick="confirmDeleteAccount()">Delete</button></div></div></div>
+<div id="spawnOverlay" class="overlay" onclick="if(event.target===this) closeSpawnModal()"><div class="sheet"><div class="sheet-h">Spawn bots <span id="spawnSelCount" class="muted"></span><button class="btn" onclick="closeSpawnModal()" style="margin-left:auto">✕</button></div><div class="sheet-b" style="padding:8px 10px"><div style="display:flex;gap:6px;margin-bottom:8px;flex-wrap:wrap"><input id="spawnFilter" placeholder="filter id / proxy" oninput="renderSpawnList()" style="flex:1;min-width:130px;padding:7px 10px;border-radius:8px;border:1px solid var(--line);background:#0a0f1f;color:var(--text);font-size:12px"><button class="btn" onclick="spawnPick('all')">All</button><button class="btn" onclick="spawnPick('stopped')">Stopped</button><button class="btn" onclick="spawnPick('none')">None</button></div><div id="spawnList" style="max-height:52vh;overflow:auto;border-top:1px solid var(--line)"></div></div><div style="display:flex;gap:8px;justify-content:flex-end;padding:10px;border-top:1px solid var(--line)"><button class="btn" onclick="closeSpawnModal()">Cancel</button><button class="btn btn-primary" id="btnSpawnGo" onclick="spawnSelected()" disabled>Spawn</button></div></div></div>
 
 <nav class="nav"><button id="nFleet" class="active" onclick="showTab('fleet')">Fleet</button><button id="nLive" onclick="showTab('live')">Live</button><button id="nDevices" onclick="showTab('devices')">Devices</button><button id="nAlerts" onclick="showTab('alerts')">Alerts</button></nav>
 <script>
@@ -121,11 +123,14 @@ let bots=[],selected=null,timer=null,prevSims={},upBal={};
 function fmtAge(s){if(!s) return '<span class="badge badge-gray">never</span>';let t=s.replace(' ','T');if(!/[Z+\-]/.test(t.slice(10))) t+='Z';else if(/\+\d{2}$/.test(t)) t+=':00';const d=new Date(t);const diff=Math.floor((Date.now()-d.getTime())/1000);if(isNaN(diff)) return s;let cls='badge-red',dot='dot-red',label=diff+'s ago';if(diff<15){cls='badge-green';dot='dot-green';}else if(diff<60){cls='badge-yellow';dot='dot-yellow';}else if(diff<300){cls='badge-yellow';}if(diff<60) label=diff+'s ago';else if(diff<3600) label=Math.floor(diff/60)+'m ago';else label=Math.floor(diff/3600)+'h ago';return `<span class="dot ${dot}"></span><span class="badge ${cls}">${label}</span>`}
 function fmtTime(s){if(!s) return '—';try{let t=s.replace(' ','T');if(!/[Z+\-]/.test(t.slice(10))) t+='Z';else if(/\+\d{2}$/.test(t)) t+=':00';return new Date(t).toLocaleString();}catch{return s;}}
 function esc(s){return String(s??'').replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]))}
-async function fetchBots(){try{const c=new AbortController();const to=setTimeout(()=>c.abort(),4000);const r=await fetch('api/state.php',{headers:HEADERS,signal:c.signal});clearTimeout(to);const j=await r.json();if(j.ok){bots=j.bots||[];render();renderGlobalNotifs(j.notifications||[]);document.getElementById('status').textContent=bots.length+' bots • '+new Date().toLocaleTimeString();}else document.getElementById('status').textContent='error: '+(j.error||'unknown');if(selected) loadLogs(false);}catch(e){document.getElementById('status').textContent='poll '+e.message;}}
+function hbTs(s){if(!s) return -1;let t=String(s).replace(' ','T');if(!/[Z+\-]/.test(t.slice(10))) t+='Z';else if(/\+\d{2}$/.test(t)) t+=':00';const d=Date.parse(t);return isNaN(d)?-1:d;}
+function sortBots(list,key){const c=list.slice();if(key==='id') c.sort((a,b)=>(a.id??0)-(b.id??0));else c.sort((a,b)=>hbTs(b.heartbeat_at)-hbTs(a.heartbeat_at)||((a.id??0)-(b.id??0)));return c;}
+async function fetchBots(){try{const c=new AbortController();const to=setTimeout(()=>c.abort(),4000);const r=await fetch('api/state.php',{headers:HEADERS,signal:c.signal});clearTimeout(to);const j=await r.json();if(j.ok){bots=j.bots||[];render();renderTokensTable();renderGlobalNotifs(j.notifications||[]);document.getElementById('status').textContent=bots.length+' bots • '+new Date().toLocaleTimeString();}else document.getElementById('status').textContent='error: '+(j.error||'unknown');if(selected) loadLogs(false);}catch(e){document.getElementById('status').textContent='poll '+e.message;}}
 function render(){
   const q=document.getElementById('filter').value.toLowerCase();
   const tbody=document.getElementById('tbody'); const count=document.getElementById('botCount'); const muted=document.getElementById('botsMuted');
   let filtered=bots; if(q) filtered=bots.filter(b=> String(b.id).includes(q) || (b.proxy_email||'').toLowerCase().includes(q) || (b.state||'').toLowerCase().includes(q));
+  filtered=sortBots(filtered,document.getElementById('fleetSort').value);
   count.textContent=filtered.length; muted.style.display=filtered.length?'none':'block';
   tbody.innerHTML=filtered.map(b=>{
     const prev=prevSims[b.id];
@@ -191,10 +196,65 @@ async function sendLogoutLive(){if(selected===null||selected===undefined||select
 async function sendCmd(cmd){if(selected===null||selected===undefined||selected==='') return alert('Select a bot');await sendCommand(selected,cmd,null);}
 async function sendCustomCommand(){const bot_id=document.getElementById('customBotId').value;let cmd=document.getElementById('cmdSelect').value;const argsRaw=document.getElementById('cmdArgs').value.trim();let args=null;if(argsRaw){try{args=JSON.parse(argsRaw);}catch{return alert('Invalid JSON');}}if(cmd==='LOGOUT'&&!args) args={wait:parseInt(document.getElementById('logoutWait').value||0)};if(!bot_id) return alert('bot_id required');await sendCommand(bot_id,cmd,args);}
 async function sendCommand(bot_id,cmd,args){try{const r=await fetch('api/command.php',{method:'POST',headers:HEADERS,body:JSON.stringify({bot_id:parseInt(bot_id),cmd,args})});const j=await r.json();if(j.ok) alert('Queued '+cmd+' for '+bot_id);else alert('Failed: '+(j.error||'unknown'));}catch(e){alert('Send failed: '+e.message);}}
-let fetchInFlight=false;async function fetchBotsSafe(){if(fetchInFlight) return;fetchInFlight=true;try{await fetchBots();}finally{fetchInFlight=false;}}async function spawnBots(){const spec=prompt('BOT_ID(s) to spawn — e.g. 14, or 0,1,2, or 0-5, or all:','');if(spec===null) return;const s=String(spec).trim();if(!s) return;const st=document.getElementById('status');const prev=st.textContent;st.textContent='Spawning '+s+'…';try{const r=await fetch('api/spawn_bot.php',{method:'POST',headers:HEADERS,body:JSON.stringify({bot_ids:s})});const j=await r.json();if(!j.ok&&(!j.output||!j.output.trim())) throw new Error(j.error||'unknown');const tail=(j.output||'').trim().split('\n').slice(-25).join('\n');alert((j.ok?'Spawned ':'Spawn reported issues:')+' '+s+'\n\n'+tail);st.textContent='Spawn '+s+' done';fetchBotsSafe();}catch(e){st.textContent=prev;alert('Spawn failed: '+e.message);}}
+let fetchInFlight=false;async function fetchBotsSafe(){if(fetchInFlight) return;fetchInFlight=true;try{await fetchBots();}finally{fetchInFlight=false;}}
+let spawnRouting=[],spawnWarning='';
+async function spawnBots(){
+  const list=document.getElementById('spawnList');
+  list.innerHTML='<div class="muted" style="padding:10px">Loading routing…</div>';
+  document.getElementById('spawnOverlay').style.display='flex';
+  document.getElementById('spawnFilter').value='';
+  spawnWarning='';
+  try{
+    const r=await fetch('api/spawn_bot.php',{headers:HEADERS});const j=await r.json();
+    if(!j.ok) throw new Error(j.error||'unknown');
+    spawnRouting=j.bots||[];
+    if(!j.spawn_sh) spawnWarning='<div class="muted" style="padding:8px 4px;color:#fbbf44">spawn.sh missing on server — spawn will fail</div>';
+    renderSpawnList();
+  }catch(e){list.innerHTML='<div class="muted" style="padding:10px;color:#f87171">Load failed: '+esc(e.message)+'</div>';}
+}
+function closeSpawnModal(){document.getElementById('spawnOverlay').style.display='none';}
+function renderSpawnList(){
+  const q=(document.getElementById('spawnFilter').value||'').toLowerCase();
+  const rows=spawnRouting.filter(b=>!q||String(b.id)===q||String(b.id).startsWith(q)||(b.proxy||'').toLowerCase().includes(q)||(b.poll_inbox||'').toLowerCase().includes(q));
+  document.getElementById('spawnList').innerHTML=spawnWarning+rows.map(b=>{
+    const badge=b.running?'<span class="badge badge-green">RUNNING '+esc((b.state||'').slice(0,14))+'</span>':(b.heartbeat_at?'<span class="badge badge-yellow">STALE</span>':'<span class="badge badge-gray">STOPPED</span>');
+    return `<label style="display:flex;gap:8px;align-items:center;padding:8px 4px;border-bottom:1px solid var(--line);cursor:pointer"><input type="checkbox" data-spawn="${b.id}" onchange="updateSpawnSel()"><b style="width:30px">${esc(b.id)}</b><span style="flex:1;min-width:0"><div style="font-size:12px;overflow:hidden;text-overflow:ellipsis">${esc(b.proxy)}</div><div class="small">${esc(b.poll_inbox)} • ${esc(b.type)}</div></span>${badge}</label>`;
+  }).join('')||'<div class="muted" style="padding:10px">No match</div>';
+  updateSpawnSel();
+}
+function spawnPick(mode){
+  document.querySelectorAll('#spawnList input[data-spawn]').forEach(cb=>{
+    const b=spawnRouting.find(x=>String(x.id)===cb.getAttribute('data-spawn'));
+    cb.checked = mode==='all' ? true : mode==='none' ? false : b?!b.running:false;
+  });
+  updateSpawnSel();
+}
+function spawnSelIds(){return [...document.querySelectorAll('#spawnList input[data-spawn]:checked')].map(e=>e.getAttribute('data-spawn'));}
+function updateSpawnSel(){const ids=spawnSelIds();document.getElementById('spawnSelCount').textContent=ids.length?ids.length+' selected':'';document.getElementById('btnSpawnGo').disabled=!ids.length;document.getElementById('btnSpawnGo').textContent=ids.length?'Spawn '+ids.length:'Spawn';}
+async function spawnSelected(){
+  const ids=spawnSelIds();if(!ids.length)return;
+  const spec=ids.join(',');
+  const st=document.getElementById('status');const prev=st.textContent;
+  st.textContent='Spawning '+spec+'…';
+  const btn=document.getElementById('btnSpawnGo');btn.disabled=true;
+  try{
+    const r=await fetch('api/spawn_bot.php',{method:'POST',headers:HEADERS,body:JSON.stringify({bot_ids:spec})});
+    const j=await r.json();
+    if(!j.ok&&(!j.output||!j.output.trim())) throw new Error(j.error||'unknown');
+    const tail=(j.output||'').trim().split('\n').slice(-30).join('\n');
+    closeSpawnModal();
+    alert((j.ok?'Spawned ':'Spawn reported issues:')+' '+spec+'\n\n'+tail);
+    st.textContent='Spawn '+spec+' done';
+    fetchBotsSafe();
+  }catch(e){st.textContent=prev;alert('Spawn failed: '+e.message);}
+  finally{btn.disabled=false;updateSpawnSel();}
+}
 function pollNow(){fetchBotsSafe();fetchTokensTable();}function resetTimer(){const v=parseInt(document.getElementById('autoPoll').value);if(timer) clearInterval(timer);if(v>0) timer=setInterval(fetchBotsSafe,v);}async function sendWake(bot_id){const id=bot_id??selected;if(id===null||id===undefined||id==='') return alert('Select bot');await sendCommand(id,'WAKE',{});}async function sendSleep(bot_id){const id=bot_id??selected;if(id===null||id===undefined||id==='') return alert('Select bot');const v=prompt('Sleep seconds for bot '+id+' (0-86400):','60');if(v===null) return;const wait=parseInt(v||0);if(isNaN(wait)||wait<0) return alert('Invalid');await sendCommand(id,'SLEEP',{wait});}async function removeBot(bot_id){const id=bot_id??selected;if(id===null||id===undefined||id==='') return alert('Select bot');if(!confirm('Remove Bot '+id+'?')) return;try{const r=await fetch('api/delete_bot.php',{method:'POST',headers:HEADERS,body:JSON.stringify({bot_id:parseInt(id)})});const j=await r.json();if(j.ok){if(selected==id) selected=null;fetchBotsSafe();fetchTokensTable();}else alert('Failed: '+(j.error||'unknown'));}catch(e){alert('Remove failed: '+e.message);}}
+async function destroySelected(){const bid=getSelectedBotId();if(bid===null||bid===undefined||bid==='') return alert('Select device checkbox first');if(!confirm('Destroy device '+bid+'? Removes it from the fleet (commands, logs, captures, notifications). Site account stays.')) return;try{const r=await fetch('api/delete_bot.php',{method:'POST',headers:HEADERS,body:JSON.stringify({bot_id:parseInt(bid)})});const j=await r.json();if(j.ok){if(selected==bid) selected=null;fetchBotsSafe();fetchTokensTable();}else alert('Failed: '+(j.error||'unknown'));}catch(e){alert('Destroy failed: '+e.message);}}
 async function fetchUpBalances(){const ids=bots.map(b=>b.id);if(!ids.length) return;try{const rs=await Promise.all(ids.map(id=>fetch('api/up_balance.php?bot_id='+encodeURIComponent(id),{headers:HEADERS}).then(r=>r.json()).catch(()=>null)));let changed=false;ids.forEach((id,i)=>{const j=rs[i];const v=(j&&j.ok&&j.up!=null)?j.up:null;if(upBal[id]!==v){upBal[id]=v;changed=true;}});if(changed||!upBal._init){upBal._init=true;render();}}catch(e){}}
-setInterval(()=>{document.getElementById('clock').textContent=new Date().toLocaleTimeString();},1000);fetchBotsSafe();timer=setInterval(fetchBotsSafe,5000);setTimeout(fetchUpBalances,1500);setInterval(fetchUpBalances,60000);
+async function fetchUp24(){try{const r=await fetch('api/up_24h.php',{headers:HEADERS});const j=await r.json();const el=document.getElementById('up24h');if(el&&j.ok){el.textContent='+ '+j.total_24h+' UP / 24h';el.title=j.partial?'partial — history shorter than 24h':'rolling 24h (increases only)';}}catch(e){}}
+['fleetSort','deviceSort'].forEach(id=>{const el=document.getElementById(id);if(!el) return;const v=localStorage.getItem(id);if(v&&[...el.options].some(o=>o.value===v)) el.value=v;el.addEventListener('change',()=>localStorage.setItem(id,el.value));});
+setInterval(()=>{document.getElementById('clock').textContent=new Date().toLocaleTimeString();},1000);fetchBotsSafe();timer=setInterval(fetchBotsSafe,5000);setTimeout(fetchUpBalances,1500);setInterval(fetchUpBalances,60000);setTimeout(fetchUp24,3000);setInterval(fetchUp24,60000);
 let tokenPollTimer=null;let simsCache=[],packagesCache=[];
 function maskToken(t){if(!t) return '<span class="badge badge-gray">—</span>';t=String(t);if(t.length<10) return esc(t);return esc(t.slice(0,6))+'…'+esc(t.slice(-4))+' <span style="color:var(--ok)">●</span>';}
 function fmtTime(s){if(!s) return '—';try{let t=s.replace(' ','T');if(!/[Z+\-]/.test(t.slice(10))) t+='Z';else if(/\+\d{2}$/.test(t)) t+=':00';return new Date(t).toLocaleString();}catch{return s;}}
@@ -202,17 +262,19 @@ function fetchTokensTable(){if(bots.length) renderTokensTable();}
 function renderTokensTable(){
   const tbody=document.getElementById('tokenTbody');const sel=document.getElementById('simBotSelect');if(!tbody) return;
   const checked=new Set([...tbody.querySelectorAll('input[type=checkbox][data-bot]:checked')].map(e=>e.getAttribute('data-bot')));
-  tbody.innerHTML=bots.map(b=>{
+  const list=sortBots(bots,document.getElementById('deviceSort').value);
+  tbody.innerHTML=list.map(b=>{
     const masked=b.auth_token?maskToken(b.auth_token):'<span class="badge badge-gray">—</span>';
     const isChecked=checked.has(String(b.id))?'checked':'';
     return `<tr><td><input type="checkbox" data-bot="${b.id}" ${isChecked} onchange="onTokenCheck()"></td><td><b>${esc(b.id)}</b><div class="small">${esc((b.proxy_email||'').split('@')[0])}</div></td><td>${masked}</td><td><span class="badge badge-gray">${esc(b.state||'—')}</span><div class="small">${fmtAge(b.heartbeat_at)}</div></td></tr>`;
   }).join('');
-  if(sel){const prev=sel.value;sel.innerHTML=bots.map(b=>`<option value="${b.id}">Bot ${b.id} — ${esc((b.proxy_email||'').slice(0,16))} ${b.auth_token?'●':''}</option>`).join('');if(prev) sel.value=prev;}
-  document.getElementById('tokenStatus').textContent=bots.length?`${bots.length} device(s) — ${bots.filter(b=>b.auth_token).length}/${bots.length} tokens`:'No bots';
+  if(sel){const prev=sel.value;sel.innerHTML=list.map(b=>`<option value="${b.id}">Bot ${b.id} — ${esc((b.proxy_email||'').slice(0,16))} ${b.auth_token?'●':''}</option>`).join('');if(prev) sel.value=prev;}
+  updateTokenStatus(checked.size);
   document.getElementById('postTokenControls').style.display=bots.length?'flex':'none';
 }
 function toggleAll(checked){document.querySelectorAll('#tokenTbody input[type=checkbox][data-bot]').forEach(e=>e.checked=checked);onTokenCheck();}
-function onTokenCheck(){const any=document.querySelector('#tokenTbody input[type=checkbox][data-bot]:checked');document.getElementById('postTokenControls').style.display=any?'flex':'none';}
+function onTokenCheck(){const n=document.querySelectorAll('#tokenTbody input[type=checkbox][data-bot]:checked').length;updateTokenStatus(n);}
+function updateTokenStatus(selCount){const el=document.getElementById('tokenStatus');if(!el) return;if(!bots.length){el.textContent='No bots';return;}const withTok=bots.filter(b=>b.auth_token).length;el.textContent=`${bots.length} device(s) — ${withTok}/${bots.length} tokens${selCount?' • '+selCount+' selected':''}`;}
 function getSelectedBotId(){const cb=document.querySelector('#tokenTbody input[type=checkbox][data-bot]:checked');if(cb) return cb.getAttribute('data-bot');const sel=document.getElementById('simBotSelect');if(sel&&sel.value) return sel.value;if(selected!==null&&selected!==undefined&&selected!=='') return selected;return bots[0]?.id??null;}
 async function loadDevicesAndTokens(){const btn=document.getElementById('btnLoadTokens');btn.disabled=true;btn.textContent='Loading…';try{const r=await fetch('api/state.php',{headers:HEADERS});const j=await r.json();if(j.ok){bots=j.bots||[];render();renderTokensTable();}if(!bots.length){alert('No bots');btn.disabled=false;btn.textContent='Load tokens';return;}document.getElementById('tokenStatus').textContent=`Queuing get_auth_token to ${bots.length} bot(s)…`;for(const b of bots){try{await fetch('api/command.php',{method:'POST',headers:HEADERS,body:JSON.stringify({bot_id:parseInt(b.id),cmd:'get_auth_token'})});}catch(e){}}document.getElementById('tokenStatus').textContent=`Polling tokens…`;let polls=0;if(tokenPollTimer) clearInterval(tokenPollTimer);tokenPollTimer=setInterval(async()=>{polls++;try{const pr=await fetch('api/state.php',{headers:HEADERS});const pj=await pr.json();if(pj.ok){bots=pj.bots||bots;render();renderTokensTable();}}catch{}if(polls>=10){clearInterval(tokenPollTimer);document.getElementById('tokenStatus').textContent=`Done — ${bots.filter(b=>b.auth_token).length}/${bots.length} tokens.`;btn.disabled=false;btn.textContent='Load tokens';}},1500);}catch(e){document.getElementById('tokenStatus').textContent='Load failed: '+e.message;btn.disabled=false;btn.textContent='Load tokens';}}
 function openSimRegisterFlow(){const bid=getSelectedBotId();if(bid===null||bid===undefined||bid==='') return alert('Select device');document.getElementById('simMappingArea').style.display='block';document.getElementById('simBotSelect').value=bid;document.getElementById('simFetchStatus').textContent='Ready — Fetch';document.getElementById('simMappingArea').scrollIntoView({behavior:'smooth'});}

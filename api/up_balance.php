@@ -31,6 +31,16 @@ try {
     )");
 } catch (Exception $e) {}
 
+try {
+    $pdo->exec("CREATE TABLE IF NOT EXISTS bot_up_balance_history (
+        id BIGSERIAL PRIMARY KEY,
+        bot_id INTEGER NOT NULL,
+        balance BIGINT NOT NULL,
+        recorded_at TIMESTAMPTZ DEFAULT NOW()
+    )");
+    $pdo->exec("CREATE INDEX IF NOT EXISTS ubh_bot_time ON bot_up_balance_history (bot_id, recorded_at)");
+} catch (Exception $e) {}
+
 const UP_TTL = 60;          // seconds before re-calling UnityEdge
 const UP_RPC = 'https://api.unityedge.io/rest/v1/rpc/rewards_get_balance';
 
@@ -210,6 +220,16 @@ try {
                    ON CONFLICT (bot_id) DO UPDATE SET balance=EXCLUDED.balance, error=EXCLUDED.error, fetched_at=NOW()")
         ->execute([':id' => $bot_id, ':b' => $balance, ':e' => $err]);
 } catch (Exception $e) {}
+
+if ($balance !== null) {
+    try {
+        $pdo->prepare("INSERT INTO bot_up_balance_history (bot_id, balance) VALUES (:id, :b)")
+            ->execute([':id' => $bot_id, ':b' => $balance]);
+        if (random_int(1, 30) === 1) {
+            $pdo->exec("DELETE FROM bot_up_balance_history WHERE recorded_at < NOW() - INTERVAL '48 hours'");
+        }
+    } catch (Exception $e) {}
+}
 
 echo json_encode([
     'ok' => true, 'bot_id' => $bot_id, 'cached' => false,
