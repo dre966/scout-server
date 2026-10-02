@@ -87,7 +87,7 @@ tr.selected td{background:rgba(59,130,246,.08)}
 <div id="tab-devices" class="tab">
 <div class="card">
 <div class="card-h"><h2>Devices & SIMs</h2><div style="display:flex;gap:6px;align-items:center"><select id="deviceSort" onchange="renderTokensTable()" title="Sort by"><option value="hb" selected>Last pinged</option><option value="id">ID</option></select><button class="btn btn-primary" id="btnLoadTokens" onclick="loadDevicesAndTokens()">Load tokens</button></div></div>
-<div class="table-wrap" style="max-height:30vh"><table><thead><tr><th><input type="checkbox" id="chkAll" onchange="toggleAll(this.checked)"></th><th>Bot</th><th>Proxy → Poll</th><th>Token</th><th>State / HB</th></tr></thead><tbody id="tokenTbody"></tbody></table></div>
+<div class="table-wrap" style="max-height:30vh"><table><thead><tr><th><input type="checkbox" id="chkAll" onchange="toggleAll(this.checked)"></th><th>Bot</th><th>Token</th><th>State / HB</th><th>Country</th></tr></thead><tbody id="tokenTbody"></tbody></table></div>
 <div id="tokenStatus" class="muted">Tokens auto-sync from bots every few seconds — Load only forces a refresh.</div>
 <div class="controls" id="postTokenControls" style="display:none">
 <button class="btn btn-primary" onclick="goToSite()">↗ Go to site</button>
@@ -254,19 +254,26 @@ async function destroySelected(){const bid=getSelectedBotId();if(bid===null||bid
 async function fetchUpBalances(){const ids=bots.map(b=>b.id);if(!ids.length) return;try{const rs=await Promise.all(ids.map(id=>fetch('api/up_balance.php?bot_id='+encodeURIComponent(id),{headers:HEADERS}).then(r=>r.json()).catch(()=>null)));let changed=false;ids.forEach((id,i)=>{const j=rs[i];const v=(j&&j.ok&&j.up!=null)?j.up:null;if(upBal[id]!==v){upBal[id]=v;changed=true;}});if(changed||!upBal._init){upBal._init=true;render();}}catch(e){}}
 async function fetchUp24(){try{const r=await fetch('api/up_24h.php',{headers:HEADERS});const j=await r.json();const el=document.getElementById('up24h');if(el&&j.ok){el.textContent='+ '+j.total_24h+' UP / 24h';el.title=j.partial?'partial — history shorter than 24h':'rolling 24h (increases only)';}}catch(e){}}
 ['fleetSort','deviceSort'].forEach(id=>{const el=document.getElementById(id);if(!el) return;const v=localStorage.getItem(id);if(v&&[...el.options].some(o=>o.value===v)) el.value=v;el.addEventListener('change',()=>localStorage.setItem(id,el.value));});
-setInterval(()=>{document.getElementById('clock').textContent=new Date().toLocaleTimeString();},1000);fetchBotsSafe();timer=setInterval(fetchBotsSafe,5000);setTimeout(fetchUpBalances,1500);setInterval(fetchUpBalances,60000);setTimeout(fetchUp24,3000);setInterval(fetchUp24,60000);
+setInterval(()=>{document.getElementById('clock').textContent=new Date().toLocaleTimeString();},1000);fetchBotsSafe();fetchRoutingTags();timer=setInterval(fetchBotsSafe,2000);setInterval(fetchRoutingTags,60000);setTimeout(fetchUpBalances,1500);setInterval(fetchUpBalances,60000);setTimeout(fetchUp24,3000);setInterval(fetchUp24,60000);
 let tokenPollTimer=null;let simsCache=[],packagesCache=[];
 function maskToken(t){if(!t) return '<span class="badge badge-gray">—</span>';t=String(t);if(t.length<10) return esc(t);return esc(t.slice(0,6))+'…'+esc(t.slice(-4))+' <span style="color:var(--ok)">●</span>';}
 function fmtTime(s){if(!s) return '—';try{let t=s.replace(' ','T');if(!/[Z+\-]/.test(t.slice(10))) t+='Z';else if(/\+\d{2}$/.test(t)) t+=':00';return new Date(t).toLocaleString();}catch{return s;}}
 function fetchTokensTable(){if(bots.length) renderTokensTable();}
+let routingTags={};
+async function fetchRoutingTags(){try{const r=await fetch('api/routing.php',{headers:HEADERS});const j=await r.json();if(j.ok){routingTags={};(j.entries||[]).forEach(e=>{routingTags[e.id]=e;});}}catch(e){}}
+async function setDeviceCountry(id,val){const prev=(routingTags[id]&&routingTags[id].country)||'';try{const r=await fetch('api/routing.php',{method:'POST',headers:HEADERS,body:JSON.stringify({bot_id:parseInt(id),country:val||null})});const j=await r.json();if(!j.ok) throw new Error(j.error||'failed');routingTags[id]=Object.assign({},routingTags[id]||{id:parseInt(id)},{country:j.country||null});}catch(e){alert('Country tag failed: '+e.message);routingTags[id]=Object.assign({},routingTags[id]||{id:parseInt(id)},{country:prev});renderTokensTable();}}
 function renderTokensTable(){
   const tbody=document.getElementById('tokenTbody');const sel=document.getElementById('simBotSelect');if(!tbody) return;
+  const active=document.activeElement;
+  if(active&&tbody.contains(active)&&active.tagName==='SELECT') return;
   const checked=new Set([...tbody.querySelectorAll('input[type=checkbox][data-bot]:checked')].map(e=>e.getAttribute('data-bot')));
   const list=sortBots(bots,document.getElementById('deviceSort').value);
   tbody.innerHTML=list.map(b=>{
     const masked=b.auth_token?maskToken(b.auth_token):'<span class="badge badge-gray">—</span>';
     const isChecked=checked.has(String(b.id))?'checked':'';
-    return `<tr><td><input type="checkbox" data-bot="${b.id}" ${isChecked} onchange="onTokenCheck()"></td><td><b>${esc(b.id)}</b><div class="small">${esc((b.proxy_email||'').split('@')[0])}</div></td><td>${masked}</td><td><span class="badge badge-gray">${esc(b.state||'—')}</span><div class="small">${fmtAge(b.heartbeat_at)}</div></td></tr>`;
+    const cur=(routingTags[b.id]&&routingTags[b.id].country)||'';
+    const opts=[['','—'],['US','USA'],['CA','Canada']].map(([v,lab])=>`<option value="${v}" ${cur===v?'selected':''}>${lab}</option>`).join('');
+    return `<tr><td><input type="checkbox" data-bot="${b.id}" ${isChecked} onchange="onTokenCheck()"></td><td><b>${esc(b.id)}</b><div class="small">${esc((b.proxy_email||'').split('@')[0])}</div></td><td>${masked}</td><td><span class="badge badge-gray">${esc(b.state||'—')}</span><div class="small">${fmtAge(b.heartbeat_at)}</div></td><td><select onchange="setDeviceCountry(${b.id},this.value)" style="min-width:86px">${opts}</select></td></tr>`;
   }).join('');
   if(sel){const prev=sel.value;sel.innerHTML=list.map(b=>`<option value="${b.id}">Bot ${b.id} — ${esc((b.proxy_email||'').slice(0,16))} ${b.auth_token?'●':''}</option>`).join('');if(prev) sel.value=prev;}
   updateTokenStatus(checked.size);
