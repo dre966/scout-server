@@ -25,6 +25,16 @@ if ($bot_id === null || $bot_id === '') {
 }
 $bid = (int)$bot_id;
 
+// Stop the Docker container FIRST (blocking) — otherwise the bot's next
+// heartbeat (<=2s) re-INSERTs its row and the "destroyed" bot reappears.
+$container = 'scout-bot-' . $bid;
+$dockerOut = null;
+$containerRemoved = false;
+if (preg_match('/^scout-bot-\d+$/', $container)) {
+    $dockerOut = shell_exec('docker rm -f ' . escapeshellarg($container) . ' 2>&1');
+    $containerRemoved = trim((string)$dockerOut) === $container;
+}
+
 try {
     $stmt = $pdo->prepare("SELECT id, proxy_email FROM bots WHERE id = :id");
     $stmt->execute([':id' => $bid]);
@@ -59,7 +69,13 @@ try {
             ->execute([':bid' => $bid, ':msg' => $msg]);
     } catch (Exception $e) {}
 
-    echo json_encode(['ok' => true, 'bot_id' => $bid, 'removed' => $removed]);
+    echo json_encode([
+        'ok' => true,
+        'bot_id' => $bid,
+        'removed' => $removed,
+        'container' => $containerRemoved,
+        'docker' => trim((string)$dockerOut),
+    ]);
 } catch (Exception $e) {
     http_response_code(500);
     echo json_encode(['ok' => false, 'error' => $e->getMessage()]);

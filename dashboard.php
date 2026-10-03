@@ -65,7 +65,7 @@ tr.selected td{background:rgba(59,130,246,.08)}
 <div id="botsMuted" class="muted" style="display:none">No bots — check <code>SERVER_URL</code> + <code>BOT_ID</code></div>
 <div class="controls">
 <input id="customBotId" placeholder="bot_id" type="number" style="width:80px">
-<select id="cmdSelect" onchange="onCmdChange()"><option value="PAUSE">PAUSE</option><option value="RESUME">RESUME</option><option value="RESTART">RESTART</option><option value="LOGOUT">LOGOUT</option></select>
+<select id="cmdSelect" onchange="onCmdChange()"><option value="PAUSE">PAUSE</option><option value="RESUME">RESUME</option><option value="RESTART">RESTART</option><option value="REGISTER_UI">REGISTER_UI</option><option value="LOGOUT">LOGOUT</option></select>
 <input id="cmdArgs" placeholder='args {"wait":60}' style="flex:1">
 <button class="btn btn-primary" onclick="sendCustomCommand()">Send</button>
 <span id="logoutHint" style="display:none;gap:6px;align-items:center"><input id="logoutWait" type="number" value="60" style="width:70px"><button class="btn btn-danger" onclick="sendLogout()">Logout & Wait</button></span>
@@ -80,7 +80,7 @@ tr.selected td{background:rgba(59,130,246,.08)}
 <div id="logs" class="logs" style="display:none"></div>
 <div id="notifs" class="logs" style="display:none"></div>
 <div id="liveLogs" class="logs" style="display:none"></div>
-<div class="controls"><button class="btn" onclick="sendCmd('PAUSE')">Pause</button><button class="btn" onclick="sendCmd('RESUME')">Resume</button><button class="btn btn-danger" onclick="sendCmd('RESTART')">Restart</button><span style="display:flex;gap:6px;flex:1"><input id="logoutWaitLive" type="number" value="60" style="width:70px"><button class="btn btn-danger" onclick="sendLogoutLive()" style="flex:1">Logout & Wait</button></span></div>
+<div class="controls"><button class="btn" onclick="sendCmd('PAUSE')">Pause</button><button class="btn" onclick="sendCmd('RESUME')">Resume</button><button class="btn btn-danger" onclick="sendCmd('RESTART')">Restart</button><button class="btn btn-primary" onclick="sendCmd('REGISTER_UI')" title="Switch to runner and add SIMs from data/sims.json via the UI">＋ Add SIMs</button><span style="display:flex;gap:6px;flex:1"><input id="logoutWaitLive" type="number" value="60" style="width:70px"><button class="btn btn-danger" onclick="sendLogoutLive()" style="flex:1">Logout & Wait</button></span></div>
 </div>
 </div>
 
@@ -150,7 +150,7 @@ function render(){
       <td>${fmtAge(b.heartbeat_at)}</td>
       <td>${upBal[b.id]!=null?`<b>${upBal[b.id]} UP</b>`:'—'}</td>
       <td><div class="small">${esc((b.current_url||'').slice(0,26))}</div></td>
-      <td><div style="display:flex;gap:4px"><button class="btn" onclick="event.stopPropagation();sendWake(${b.id})">Wake</button><button class="btn" onclick="event.stopPropagation();sendSleep(${b.id})">Sleep</button><button class="btn btn-danger" onclick="event.stopPropagation();removeBot(${b.id})">✕</button><button class="btn" onclick="event.stopPropagation();selectBot(${b.id});sendCmd('RESTART')">↻</button></div></td>
+      <td><div style="display:flex;gap:4px"><button class="btn" onclick="event.stopPropagation();sendWake(${b.id})">Wake</button><button class="btn" onclick="event.stopPropagation();sendSleep(${b.id})">Sleep</button><button class="btn btn-primary" onclick="event.stopPropagation();sendCommand(${b.id},'REGISTER_UI',null)" title="Add SIMs via UI">＋Add</button><button class="btn btn-danger" onclick="event.stopPropagation();removeBot(${b.id})">✕</button><button class="btn" onclick="event.stopPropagation();selectBot(${b.id});sendCmd('RESTART')">↻</button></div></td>
     </tr>`;
   }).join('');
 }
