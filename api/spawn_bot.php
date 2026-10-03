@@ -15,10 +15,14 @@ if ($provided !== $expected) {
 
 if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
     // GET -> routing list (BOT_ID -> proxy) merged with live heartbeat status
-    $routingFile = getenv('ROUTING_JSON') ?: __DIR__ . '/../data/routing.json';
-    if (!is_file($routingFile)) {
+    $candidates = array_filter([getenv('ROUTING_JSON'), __DIR__ . '/../data/routing.json']);
+    $routingFile = null;
+    foreach ($candidates as $candidate) {
+        if (is_file($candidate)) { $routingFile = $candidate; break; }
+    }
+    if ($routingFile === null) {
         http_response_code(500);
-        echo json_encode(['ok' => false, 'error' => 'routing.json not found at ' . $routingFile]);
+        echo json_encode(['ok' => false, 'error' => 'routing.json not found; tried: ' . implode(', ', $candidates)]);
         exit;
     }
     $routing = json_decode((string)file_get_contents($routingFile), true);
@@ -73,8 +77,8 @@ if (!preg_match('/^(all|[0-9]+([,-][0-9]+)*)$/', $spec)) {
 
 $script = '/var/www/scout-bot/spawn.sh';
 if (!is_file($script)) {
-    http_response_code(500);
-    echo json_encode(['ok' => false, 'error' => 'spawn.sh not found at ' . $script]);
+    http_response_code(503);
+    echo json_encode(['ok' => false, 'error' => 'spawn.sh not available on this host']);
     exit;
 }
 

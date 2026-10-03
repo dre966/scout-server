@@ -5,18 +5,9 @@ header('Access-Control-Allow-Methods: GET, POST, OPTIONS');
 header('Access-Control-Allow-Headers: Content-Type, X-Bot-Token');
 if ($_SERVER['REQUEST_METHOD'] === 'OPTIONS') { http_response_code(204); exit; }
 
-// Auth check - allow dashboard GET without token if no header sent, but enforce if header present
-// For bot POST we require token; for dashboard polling we embed token in JS
 $expected = getenv('BOT_TOKEN') ?: 'scout-secret';
-$provided = $_SERVER['HTTP_X_BOT_TOKEN'] ?? null;
-$isBotPost = $_SERVER['REQUEST_METHOD'] === 'POST';
-if ($provided !== null && $provided !== $expected) {
-    http_response_code(401);
-    echo json_encode(['ok' => false, 'error' => 'unauthorized']);
-    exit;
-}
-if ($isBotPost && $provided !== $expected) {
-    // POST must have valid token
+$provided = $_SERVER['HTTP_X_BOT_TOKEN'] ?? '';
+if ($provided !== $expected) {
     http_response_code(401);
     echo json_encode(['ok' => false, 'error' => 'unauthorized']);
     exit;

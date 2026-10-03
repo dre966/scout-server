@@ -6,20 +6,11 @@ header('Access-Control-Allow-Headers: Content-Type, X-Bot-Token');
 if ($_SERVER['REQUEST_METHOD'] === 'OPTIONS') { http_response_code(204); exit; }
 
 $expected = getenv('BOT_TOKEN') ?: 'scout-secret';
-$provided = $_SERVER['HTTP_X_BOT_TOKEN'] ?? null;
-// GET: allow dashboard (no token) or bot (with token) - if token present validate
-if ($provided !== null && $provided !== $expected) {
+$provided = $_SERVER['HTTP_X_BOT_TOKEN'] ?? '';
+if ($provided !== $expected) {
     http_response_code(401);
     echo json_encode(['ok' => false, 'error' => 'unauthorized']);
     exit;
-}
-// POST from dashboard also needs token if we want strict - but allow without for ease behind firewall
-// We enforce if header is set; dashboard JS will send it.
-if ($_SERVER['REQUEST_METHOD'] === 'POST' && $provided === null) {
-    // Check if caller is bot? For dashboard we still allow - but we can be lenient
-    // To keep spec: require token for POST if BOT_TOKEN is not default? We'll allow missing token for localhost/dashboard
-    // Uncomment next 3 lines to enforce strict:
-    // http_response_code(401); echo json_encode(['ok'=>false,'error'=>'unauthorized']); exit;
 }
 
 require_once __DIR__ . '/../config/db.php';

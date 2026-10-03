@@ -17,7 +17,11 @@ require_once __DIR__ . '/../config/db.php';
 
 // Base routing list ships with the server repo; rest/country tags live in
 // Postgres so edits survive redeploys and are readable by the Railway bots.
-$baseFile = __DIR__ . '/../data/routing.json';
+$routingCandidates = array_filter([getenv('ROUTING_JSON'), __DIR__ . '/../data/routing.json']);
+$baseFile = null;
+foreach ($routingCandidates as $candidate) {
+    if (is_file($candidate)) { $baseFile = $candidate; break; }
+}
 
 function routing_load($file) {
     $raw = @file_get_contents($file);
@@ -40,6 +44,7 @@ function routing_tags_all(PDO $pdo): array {
 
 try {
     ensure_routing_tags_table();
+    if ($baseFile === null) throw new Exception('routing.json not found; tried: ' . implode(', ', $routingCandidates));
     $entries = routing_load($baseFile);
     $tags = routing_tags_all($pdo);
 

@@ -6,8 +6,8 @@ header('Access-Control-Allow-Headers: Content-Type, X-Bot-Token');
 if ($_SERVER['REQUEST_METHOD'] === 'OPTIONS') { http_response_code(204); exit; }
 
 $expected = getenv('BOT_TOKEN') ?: 'scout-secret';
-$provided = $_SERVER['HTTP_X_BOT_TOKEN'] ?? null;
-if ($provided !== null && $provided !== $expected) { http_response_code(401); echo json_encode(['ok'=>false,'error'=>'unauthorized']); exit; }
+$provided = $_SERVER['HTTP_X_BOT_TOKEN'] ?? '';
+if ($provided !== $expected) { http_response_code(401); echo json_encode(['ok'=>false,'error'=>'unauthorized']); exit; }
 require_once __DIR__ . '/../config/db.php';
 
 $bot_id = $_GET['bot_id'] ?? $_GET['id'] ?? null;
