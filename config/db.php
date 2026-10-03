@@ -65,3 +65,19 @@ function getPDO(): PDO {
     global $pdo;
     return $pdo;
 }
+
+// Lazily add bots.public_ip once per PHP process (bots started sending it 2026-10-03)
+function ensure_public_ip_col(): void {
+    static $checked = false;
+    if ($checked) return;
+    $checked = true;
+    try {
+        $pdo = getPDO();
+        $found = $pdo->query("SELECT 1 FROM information_schema.columns WHERE table_schema = current_schema() AND table_name = 'bots' AND column_name = 'public_ip'")->fetch();
+        if (!$found) {
+            $pdo->exec("ALTER TABLE bots ADD COLUMN public_ip TEXT");
+        }
+    } catch (Throwable $e) {
+        error_log("ensure_public_ip_col: " . $e->getMessage());
+    }
+}

@@ -25,12 +25,15 @@ $sims_count  = $data['sims_count'] ?? null;
 $uptime      = $data['uptime'] ?? null;
 $current_url = $data['current_url'] ?? null;
 $message     = $data['message'] ?? null;
+$ip          = isset($data['ip']) && $data['ip'] !== '' && $data['ip'] !== null ? trim((string)$data['ip']) : null;
 
 if ($bot_id === null) {
     http_response_code(400);
     echo json_encode(['ok' => false, 'error' => 'bot_id required']);
     exit;
 }
+
+if ($ip !== null) ensure_public_ip_col();
 
 try {
     // Postgres: update first
@@ -39,6 +42,7 @@ try {
         sims_count = COALESCE(:sims_count, sims_count),
         current_url = COALESCE(:current_url, current_url),
         uptime = COALESCE(:uptime, uptime),
+        public_ip = COALESCE(:ip, public_ip),
         heartbeat_at = NOW(),
         updated_at = NOW()
         WHERE id = :id");
@@ -47,19 +51,21 @@ try {
         ':sims_count' => $sims_count !== null ? (int)$sims_count : null,
         ':current_url' => $current_url,
         ':uptime' => $uptime,
+        ':ip' => $ip,
         ':id' => (int)$bot_id
     ]);
 
     if ($stmt->rowCount() === 0) {
-        $ins = $pdo->prepare("INSERT INTO bots (id, state, sims_count, current_url, uptime, heartbeat_at, created_at)
-            VALUES (:id, :state, :sims_count, :current_url, :uptime, NOW(), NOW())
-            ON CONFLICT (id) DO UPDATE SET state=EXCLUDED.state, sims_count=EXCLUDED.sims_count, current_url=EXCLUDED.current_url, uptime=EXCLUDED.uptime, heartbeat_at=NOW(), updated_at=NOW()");
+        $ins = $pdo->prepare("INSERT INTO bots (id, state, sims_count, current_url, uptime, public_ip, heartbeat_at, created_at)
+            VALUES (:id, :state, :sims_count, :current_url, :uptime, :ip, NOW(), NOW())
+            ON CONFLICT (id) DO UPDATE SET state=EXCLUDED.state, sims_count=EXCLUDED.sims_count, current_url=EXCLUDED.current_url, uptime=EXCLUDED.uptime, public_ip=COALESCE(EXCLUDED.public_ip, bots.public_ip), heartbeat_at=NOW(), updated_at=NOW()");
         $ins->execute([
             ':id' => (int)$bot_id,
             ':state' => $state,
             ':sims_count' => $sims_count !== null ? (int)$sims_count : 0,
             ':current_url' => $current_url,
-            ':uptime' => $uptime
+            ':uptime' => $uptime,
+            ':ip' => $ip
         ]);
     }
 

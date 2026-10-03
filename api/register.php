@@ -23,6 +23,7 @@ $bot_id       = $data['bot_id'] ?? $data['id'] ?? null;
 $proxy_email  = $data['proxy_email'] ?? null;
 $poll_inbox   = $data['poll_inbox'] ?? null;
 $container_id = $data['container_id'] ?? null;
+$ip           = isset($data['ip']) && $data['ip'] !== '' && $data['ip'] !== null ? trim((string)$data['ip']) : null;
 
 if ($bot_id === null || $bot_id === '') {
     http_response_code(400);
@@ -30,24 +31,28 @@ if ($bot_id === null || $bot_id === '') {
     exit;
 }
 
+if ($ip !== null) ensure_public_ip_col();
+
 try {
-    $stmt = $pdo->prepare("INSERT INTO bots (id, proxy_email, poll_inbox, container_id, heartbeat_at, created_at)
-        VALUES (:id, :proxy_email, :poll_inbox, :container_id, NOW(), NOW())
+    $stmt = $pdo->prepare("INSERT INTO bots (id, proxy_email, poll_inbox, container_id, public_ip, heartbeat_at, created_at)
+        VALUES (:id, :proxy_email, :poll_inbox, :container_id, :ip, NOW(), NOW())
         ON CONFLICT (id) DO UPDATE SET
             proxy_email = EXCLUDED.proxy_email,
             poll_inbox = EXCLUDED.poll_inbox,
             container_id = EXCLUDED.container_id,
+            public_ip = COALESCE(EXCLUDED.public_ip, bots.public_ip),
             heartbeat_at = NOW(),
             updated_at = NOW()");
     $stmt->execute([
         ':id' => (int)$bot_id,
         ':proxy_email' => $proxy_email,
         ':poll_inbox' => $poll_inbox,
-        ':container_id' => $container_id
+        ':container_id' => $container_id,
+        ':ip' => $ip
     ]);
 
     $log = $pdo->prepare("INSERT INTO bot_logs (bot_id, message, level) VALUES (:bot_id, :msg, 'info')");
-    $log->execute([':bot_id' => (int)$bot_id, ':msg' => 'registered container=' . $container_id]);
+    $log->execute([':bot_id' => (int)$bot_id, ':msg' => 'registered container=' . $container_id . ($ip ? ' ip=' . $ip : '')]);
 
     echo json_encode(['ok' => true, 'bot_id' => (int)$bot_id]);
 } catch (Exception $e) {
