@@ -41,15 +41,31 @@ if ($sslmode) {
     }
 }
 
+// connect_timeout keeps a hung handshake from tying up a PHP worker;
+// 3 retries ride out transient Render PG blips instead of 500ing.
+$dsn .= ";connect_timeout=5";
+
 $options = [
     PDO::ATTR_ERRMODE            => PDO::ERRMODE_EXCEPTION,
     PDO::ATTR_DEFAULT_FETCH_MODE => PDO::FETCH_ASSOC,
     PDO::ATTR_EMULATE_PREPARES   => false,
 ];
 
-try {
-    $pdo = new PDO($dsn, $user, $pass, $options);
-} catch (PDOException $e) {
+$pdo = null;
+$lastEx = null;
+for ($attempt = 1; $attempt <= 3; $attempt++) {
+    try {
+        $pdo = new PDO($dsn, $user, $pass, $options);
+        break;
+    } catch (PDOException $e) {
+        $lastEx = $e;
+        if ($attempt < 3) {
+            usleep(200000 * $attempt); // 200ms, 400ms
+        }
+    }
+}
+if (!$pdo) {
+    $e = $lastEx;
     error_log("DB connect failed host={$host} db={$db} user={$user}: " . $e->getMessage());
     if (php_sapi_name() !== 'cli' && strpos($_SERVER['SCRIPT_NAME'] ?? '', '/api/') !== false) {
         header('Content-Type: application/json');
