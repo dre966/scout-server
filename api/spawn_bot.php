@@ -15,7 +15,7 @@ if ($provided !== $expected) {
 
 if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
     // GET -> routing list (BOT_ID -> proxy) merged with live heartbeat status
-    $routingFile = getenv('ROUTING_JSON') ?: '/var/www/scout-bot/data/routing.json';
+    $routingFile = getenv('ROUTING_JSON') ?: __DIR__ . '/../data/routing.json';
     if (!is_file($routingFile)) {
         http_response_code(500);
         echo json_encode(['ok' => false, 'error' => 'routing.json not found at ' . $routingFile]);

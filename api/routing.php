@@ -13,8 +13,11 @@ if ($provided !== $expected) {
     exit;
 }
 
-// Same relative layout on EC2 (/var/www/...) and locally (scouts/...).
-$file = __DIR__ . '/../../scout-bot/data/routing.json';
+require_once __DIR__ . '/../config/db.php';
+
+// Base routing list ships with the server repo; rest/country tags live in
+// Postgres so edits survive redeploys and are readable by the Railway bots.
+$baseFile = __DIR__ . '/../data/routing.json';
 
 function routing_load($file) {
     $raw = @file_get_contents($file);
@@ -24,17 +27,34 @@ function routing_load($file) {
     return $data;
 }
 
+function routing_tags_all(PDO $pdo): array {
+    $tags = [];
+    foreach ($pdo->query("SELECT bot_id, rest, country FROM routing_tags") as $row) {
+        $tags[(int)$row['bot_id']] = [
+            'rest' => (bool)$row['rest'],
+            'country' => $row['country'] !== null ? strtoupper((string)$row['country']) : null,
+        ];
+    }
+    return $tags;
+}
+
 try {
-    $entries = routing_load($file);
+    ensure_routing_tags_table();
+    $entries = routing_load($baseFile);
+    $tags = routing_tags_all($pdo);
 
     if ($_SERVER['REQUEST_METHOD'] === 'GET') {
         $out = [];
         foreach ($entries as $i => $e) {
-            $c = isset($e['country']) ? strtoupper((string)$e['country']) : '';
+            $tag = $tags[(int)$i] ?? null;
+            $rest = $tag ? $tag['rest'] : !empty($e['rest']);
+            $c = $tag && $tag['country'] !== null
+                ? $tag['country']
+                : (isset($e['country']) ? strtoupper((string)$e['country']) : '');
             $out[] = [
                 'id' => (int)$i,
                 'proxy' => isset($e['proxy']) ? (string)$e['proxy'] : '',
-                'rest' => !empty($e['rest']),
+                'rest' => $rest,
                 'country' => in_array($c, ['US', 'CA'], true) ? $c : null,
             ];
         }
@@ -57,50 +77,43 @@ try {
             echo json_encode(['ok' => false, 'error' => 'no routing entry for bot ' . $id]);
             exit;
         }
-        // Only touch `rest` when the caller sent it — a country-only POST
-        // must not wipe an existing rest tag.
-        $rest = !empty($entries[$id]['rest']);
+
+        $existing = $tags[$id] ?? ['rest' => !empty($entries[$id]['rest']), 'country' => null];
+
+        // Only touch keys the caller sent - a country-only POST must not
+        // wipe an existing rest tag (and vice versa).
+        $rest = $existing['rest'];
         if (array_key_exists('rest', $data)) {
             $rest = filter_var($data['rest'], FILTER_VALIDATE_BOOLEAN);
-            if ($rest) {
-                $entries[$id]['rest'] = true;
-            } else {
-                unset($entries[$id]['rest']);
-            }
         }
 
-        // Country tag for registration (US / CA only; null clears it).
-        $country_out = null;
+        $country = $existing['country'];
         if (array_key_exists('country', $data)) {
-            $c = strtoupper(trim((string)$data['country']));
-            if (in_array($c, ['US', 'CA'], true)) {
-                $entries[$id]['country'] = $c;
-                $country_out = $c;
-            } else {
-                unset($entries[$id]['country']);
-            }
-        } elseif (isset($entries[$id]['country'])) {
-            $country_out = strtoupper((string)$entries[$id]['country']);
+            $c = strtoupper(trim((string)($data['country'] ?? '')));
+            $country = in_array($c, ['US', 'CA'], true) ? $c : null;
         }
 
-        // Atomic write (same dir) so containers never read a half-written file.
-        $tmp = $file . '.tmp.' . getmypid();
-        $json = json_encode($entries, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES);
-        if (file_put_contents($tmp, $json) === false) {
-            throw new Exception('cannot write routing.json');
+        $stmt = $pdo->prepare("INSERT INTO routing_tags (bot_id, rest, country) VALUES (:id, :rest, :country)
+            ON CONFLICT (bot_id) DO UPDATE SET rest = EXCLUDED.rest, country = EXCLUDED.country");
+        $stmt->bindValue(':id', $id, PDO::PARAM_INT);
+        $stmt->bindValue(':rest', $rest, PDO::PARAM_BOOL);
+        $stmt->bindValue(':country', $country, $country === null ? PDO::PARAM_NULL : PDO::PARAM_STR);
+        $stmt->execute();
+
+        $entry = $entries[$id];
+        $entry['rest'] = $rest;
+        if ($country !== null) {
+            $entry['country'] = $country;
+        } else {
+            unset($entry['country']);
         }
-        if (!rename($tmp, $file)) {
-            @unlink($tmp);
-            throw new Exception('cannot replace routing.json');
-        }
-        @chmod($file, 0666); // keep the world-writable mode scp expects
 
         echo json_encode([
             'ok' => true,
             'id' => $id,
             'rest' => $rest,
-            'country' => $country_out,
-            'entry' => $entries[$id],
+            'country' => $country,
+            'entry' => $entry,
         ]);
         exit;
     }

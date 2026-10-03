@@ -81,3 +81,19 @@ function ensure_public_ip_col(): void {
         error_log("ensure_public_ip_col: " . $e->getMessage());
     }
 }
+
+// rest/country tags for routing entries (set from the app, read by bots)
+function ensure_routing_tags_table(): void {
+    static $done = false;
+    if ($done) return;
+    $done = true;
+    try {
+        getPDO()->exec("CREATE TABLE IF NOT EXISTS routing_tags (
+            bot_id INTEGER PRIMARY KEY,
+            rest BOOLEAN NOT NULL DEFAULT FALSE,
+            country TEXT
+        )");
+    } catch (Throwable $e) {
+        error_log("ensure_routing_tags_table: " . $e->getMessage());
+    }
+}
