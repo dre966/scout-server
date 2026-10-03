@@ -54,8 +54,8 @@ try {
     if (php_sapi_name() !== 'cli' && strpos($_SERVER['SCRIPT_NAME'] ?? '', '/api/') !== false) {
         header('Content-Type: application/json');
         http_response_code(500);
-        // generic in prod - no host/db leak (previous InfinityFree leak fixed)
-        echo json_encode(['ok' => false, 'error' => 'DB connection failed']);
+        // transient diagnosis: include the driver message (API is token-gated)
+        echo json_encode(['ok' => false, 'error' => 'DB connection failed', 'db_error' => $e->getMessage()]);
         exit;
     }
     throw $e;
