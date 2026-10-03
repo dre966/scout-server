@@ -21,7 +21,7 @@ $baseFile = __DIR__ . '/../data/routing.json';
 
 function routing_load($file) {
     $raw = @file_get_contents($file);
-    if ($raw === false) throw new Exception('cannot read routing.json');
+    if ($raw === false) throw new Exception('cannot read routing.json: ' . $file . ' exists=' . (file_exists($file) ? '1' : '0'));
     $data = json_decode($raw, true);
     if (!is_array($data)) throw new Exception('routing.json is not an array');
     return $data;
